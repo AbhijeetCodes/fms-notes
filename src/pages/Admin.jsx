@@ -48,10 +48,13 @@ export default function Admin() {
     );
   }
 
+  const isValidUUID = (uuid) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(uuid);
+
   const handleApprove = async (id) => {
     setActing(id);
     try {
-      await approveDocument(id, user.id);
+      const reviewerId = isValidUUID(user.id) ? user.id : null;
+      await approveDocument(id, reviewerId);
       await load();
     } catch (err) { alert('Error: ' + err.message); }
     setActing(null);
@@ -61,7 +64,8 @@ export default function Admin() {
     if (!rejectModal) return;
     setActing(rejectModal);
     try {
-      await rejectDocument(rejectModal, user.id, rejectReason);
+      const reviewerId = isValidUUID(user.id) ? user.id : null;
+      await rejectDocument(rejectModal, reviewerId, rejectReason);
       setRejectModal(null);
       setRejectReason('');
       await load();

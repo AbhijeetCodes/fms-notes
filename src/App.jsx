@@ -46,16 +46,19 @@ function App() {
       <div className="app">
         <header className="header">
           <div className="header-inner">
-            <Link to="/" className="header-logo">FMS Notes</Link>
+            <Link to="/" className="header-logo">
+              <span className="logo-icon">FMS</span>
+              FMS Notes
+            </Link>
             <nav className="header-nav">
               <Link to="/" className={isActive('/')}>Library</Link>
               <Link to="/upload" className={isActive('/upload')}>Upload</Link>
               {user && <Link to="/mine" className={isActive('/mine')}>My Uploads</Link>}
               {isMod && <Link to="/admin" className={isActive('/admin')}>Admin</Link>}
               {user ? (
-                <button onClick={() => signOut()}>Sign Out</button>
+                <button className="sign-out-btn" onClick={() => signOut()}>Sign Out</button>
               ) : (
-                <button onClick={() => signInWithGoogle()}>Sign In</button>
+                <button className="sign-in-btn" onClick={() => signInWithGoogle()}>Sign In</button>
               )}
             </nav>
           </div>
@@ -70,6 +73,13 @@ function App() {
             <Route path="/admin" element={<Admin />} />
           </Routes>
         </main>
+
+        <footer className="footer">
+          <div className="footer-inner">
+            <div className="footer-brand">An initiative by FMS students</div>
+            <div className="footer-text">{'Built by Abhijeet with coffee ☕ & tokens 🪙'}</div>
+          </div>
+        </footer>
       </div>
     </AuthContext.Provider>
   );

@@ -32,6 +32,7 @@ export default function Library() {
   const coreCourses = getCoursesBySemester(semester);
   const electivesByArea = getElectivesByArea();
   const showElectives = semester === 3 || semester === 4;
+  const totalDocs = Object.values(counts).reduce((a, b) => a + b, 0);
 
   const toggleArea = (area) => {
     setOpenAreas(prev => ({ ...prev, [area]: !prev[area] }));
@@ -84,6 +85,17 @@ export default function Library() {
 
   return (
     <>
+      <div className="hero">
+        <div className="hero-content">
+          <div className="hero-badge">MBA Executive Programme</div>
+          <h1>Welcome to <span className="gold">FMS Notes</span></h1>
+          <p>
+            Your shared library for lecture notes, slides, past papers & study materials.
+            {totalDocs > 0 && <> Currently hosting <strong>{totalDocs}</strong> document{totalDocs !== 1 ? 's' : ''} across all courses.</>}
+          </p>
+        </div>
+      </div>
+
       <div className="search-bar">
         <input
           type="text"

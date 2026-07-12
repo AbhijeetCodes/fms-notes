@@ -23,7 +23,7 @@ export default function Upload() {
   if (!user) {
     return (
       <div className="sign-in-prompt">
-        <p>Sign in with Google to upload documents.</p>
+        <p>Sign in with your Google account to upload and share documents with your classmates.</p>
         <button className="btn btn-primary" onClick={() => signInWithGoogle()}>
           Sign in with Google
         </button>
@@ -191,6 +191,13 @@ export default function Upload() {
             onChange={e => { if (e.target.files[0]) handleFile(e.target.files[0]); }}
           />
         </div>
+
+        {submitting && (
+          <div className="upload-progress">
+            <div>Uploading your document...</div>
+            <div className="bar"><div className="fill" /></div>
+          </div>
+        )}
 
         <button type="submit" className="btn btn-primary" disabled={!courseCode || !title.trim() || !file || submitting}>
           {submitting ? 'Uploading...' : 'Submit for Review'}

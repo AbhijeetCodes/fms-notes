@@ -24,11 +24,10 @@ export async function getSession() {
 }
 
 export async function isModerator(email) {
-  const { data } = await supabase
-    .from('moderators')
-    .select('user_email')
-    .eq('user_email', email)
-    .maybeSingle();
+  const { data, error } = await supabase.rpc('check_is_moderator', {
+    check_email: email,
+  });
+  if (error) return false;
   return !!data;
 }
 

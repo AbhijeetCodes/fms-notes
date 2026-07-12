@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../App';
-import { fetchPendingDocuments, fetchAllDocuments, approveDocument, rejectDocument, getSignedUrl, fetchStorageUsed } from '../lib/supabase';
+import { fetchPendingDocuments, fetchAllDocuments, approveDocument, rejectDocument, previewDocument, fetchStorageUsed } from '../lib/supabase';
 import { getCourseByCode } from '../data/courses';
 
 function formatSize(bytes) {
@@ -51,7 +51,7 @@ export default function Admin() {
   const handleApprove = async (id) => {
     setActing(id);
     try {
-      await approveDocument(id, user.email);
+      await approveDocument(id, user.id);
       await load();
     } catch (err) { alert('Error: ' + err.message); }
     setActing(null);
@@ -61,7 +61,7 @@ export default function Admin() {
     if (!rejectModal) return;
     setActing(rejectModal);
     try {
-      await rejectDocument(rejectModal, user.email, rejectReason);
+      await rejectDocument(rejectModal, user.id, rejectReason);
       setRejectModal(null);
       setRejectReason('');
       await load();
@@ -70,10 +70,11 @@ export default function Admin() {
   };
 
   const handlePreview = async (doc) => {
+    setActing(doc.id);
     try {
-      const url = await getSignedUrl(doc.file_path);
-      window.open(url, '_blank');
+      await previewDocument(doc);
     } catch (err) { alert('Could not open: ' + err.message); }
+    setActing(null);
   };
 
   const pct = Math.min(100, (storageUsed / STORAGE_LIMIT) * 100);
@@ -131,7 +132,9 @@ export default function Admin() {
                   )}
                 </div>
                 <div className="doc-actions" style={{ flexDirection: 'column', gap: 4 }}>
-                  <button className="btn btn-sm" onClick={() => handlePreview(doc)}>View</button>
+                  <button className="btn btn-sm" disabled={acting === doc.id} onClick={() => handlePreview(doc)}>
+                    {acting === doc.id ? 'Loading...' : 'View'}
+                  </button>
                   {doc.status === 'pending' && (
                     <>
                       <button className="btn btn-sm btn-success" disabled={acting === doc.id} onClick={() => handleApprove(doc.id)}>

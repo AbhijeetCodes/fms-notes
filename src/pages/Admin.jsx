@@ -51,7 +51,7 @@ export default function Admin() {
   const handleApprove = async (id) => {
     setActing(id);
     try {
-      await approveDocument(id, user.email);
+      await approveDocument(id, user.id);
       await load();
     } catch (err) { alert('Error: ' + err.message); }
     setActing(null);
@@ -61,7 +61,7 @@ export default function Admin() {
     if (!rejectModal) return;
     setActing(rejectModal);
     try {
-      await rejectDocument(rejectModal, user.email, rejectReason);
+      await rejectDocument(rejectModal, user.id, rejectReason);
       setRejectModal(null);
       setRejectReason('');
       await load();

@@ -112,25 +112,25 @@ export async function fetchAllDocuments() {
   return data;
 }
 
-export async function approveDocument(id, reviewerEmail) {
+export async function approveDocument(id, reviewerId) {
   const { error } = await supabase
     .from('documents')
     .update({
       status: 'approved',
-      reviewed_by: reviewerEmail,
+      reviewed_by: reviewerId,
       reviewed_at: new Date().toISOString(),
     })
     .eq('id', id);
   if (error) throw error;
 }
 
-export async function rejectDocument(id, reviewerEmail, reason) {
+export async function rejectDocument(id, reviewerId, reason) {
   const { error } = await supabase
     .from('documents')
     .update({
       status: 'rejected',
       reject_reason: reason || null,
-      reviewed_by: reviewerEmail,
+      reviewed_by: reviewerId,
       reviewed_at: new Date().toISOString(),
     })
     .eq('id', id);

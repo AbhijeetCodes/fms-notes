@@ -24,11 +24,12 @@ export async function getSession() {
 }
 
 export async function isModerator(email) {
-  const { data, error } = await supabase.rpc('check_is_moderator', {
-    check_email: email,
-  });
+  const { data, error } = await supabase
+    .from('moderators')
+    .select('user_email')
+    .eq('user_email', email);
   if (error) return false;
-  return !!data;
+  return data && data.length > 0;
 }
 
 const ALLOWED_EXTENSIONS = ['pdf', 'ppt', 'pptx', 'doc', 'docx', 'xls', 'xlsx'];

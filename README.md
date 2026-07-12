@@ -2,7 +2,7 @@
 
 A free website for FMS Delhi MBA-Executive students to share and browse class notes, slides, and study materials organized by semester and course.
 
-**Live at:** https://abhijeetcodes.github.io/class-notes/
+**Live at:** https://abhijeetcodes.github.io/fms-notes/
 
 ## Features
 
@@ -76,12 +76,12 @@ A free website for FMS Delhi MBA-Executive students to share and browse class no
 2. Find **Google** and enable it
 3. Paste the Client ID and Client Secret from Step 4
 4. Under **Authentication → URL Configuration**, add your site URL:
-   - Site URL: `https://abhijeetcodes.github.io/class-notes/`
-   - Redirect URLs: add `https://abhijeetcodes.github.io/class-notes/`
+   - Site URL: `https://abhijeetcodes.github.io/fms-notes/`
+   - Redirect URLs: add `https://abhijeetcodes.github.io/fms-notes/`
 
 ### Step 6: Add GitHub Repo Variables
 
-1. Go to your repo: https://github.com/AbhijeetCodes/class-notes
+1. Go to your repo: https://github.com/AbhijeetCodes/fms-notes
 2. **Settings → Secrets and variables → Actions → Variables tab**
 3. Add two **repository variables** (NOT secrets):
    - `VITE_SUPABASE_URL` = your Project URL from Step 1
@@ -97,7 +97,7 @@ A free website for FMS Delhi MBA-Executive students to share and browse class no
 
 ### Step 8: Test the Full Flow
 
-1. Open https://abhijeetcodes.github.io/class-notes/
+1. Open https://abhijeetcodes.github.io/fms-notes/
 2. Click **Sign In** → sign in with Google
 3. Go to **Upload** → pick a course, add a title, upload a small PDF
 4. Open the site in an incognito window → the document should NOT appear (it's pending)

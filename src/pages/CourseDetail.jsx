@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { getCourseByCode } from '../data/courses';
-import { fetchApprovedDocuments, getSignedUrl } from '../lib/supabase';
+import { fetchApprovedDocuments, downloadDocument } from '../lib/supabase';
 
 function formatSize(bytes) {
   if (bytes < 1024) return bytes + ' B';
@@ -15,6 +15,7 @@ export default function CourseDetail() {
   const [docs, setDocs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [tagFilter, setTagFilter] = useState(null);
+  const [downloading, setDownloading] = useState(null);
 
   useEffect(() => {
     fetchApprovedDocuments(code)
@@ -24,15 +25,13 @@ export default function CourseDetail() {
   }, [code]);
 
   const handleDownload = async (doc) => {
+    setDownloading(doc.id);
     try {
-      const url = await getSignedUrl(doc.file_path);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = doc.file_name;
-      a.click();
+      await downloadDocument(doc);
     } catch (err) {
       alert('Download failed: ' + err.message);
     }
+    setDownloading(null);
   };
 
   const filtered = tagFilter
@@ -94,8 +93,8 @@ export default function CourseDetail() {
                 )}
               </div>
               <div className="doc-actions">
-                <button className="btn btn-sm btn-primary" onClick={() => handleDownload(doc)}>
-                  Download
+                <button className="btn btn-sm btn-primary" disabled={downloading === doc.id} onClick={() => handleDownload(doc)}>
+                  {downloading === doc.id ? 'Downloading...' : 'Download'}
                 </button>
               </div>
             </div>

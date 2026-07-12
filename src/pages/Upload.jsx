@@ -16,6 +16,7 @@ export default function Upload() {
   const [file, setFile] = useState(null);
   const [dragover, setDragover] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState('');
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
   const fileRef = useRef();
@@ -73,9 +74,13 @@ export default function Upload() {
     e.preventDefault();
     if (!courseCode || !title.trim() || !file) return;
     setSubmitting(true);
+    setUploadProgress('');
     setError(null);
     try {
-      await uploadDocument({ file, courseCode, title: title.trim(), description: description.trim(), tags, user });
+      await uploadDocument({
+        file, courseCode, title: title.trim(), description: description.trim(), tags, user,
+        onProgress: setUploadProgress
+      });
       setResult('Document submitted! It will appear in the library after a moderator approves it.');
       setCourseCode('');
       setTitle('');
@@ -194,7 +199,9 @@ export default function Upload() {
 
         {submitting && (
           <div className="upload-progress">
-            <div>Uploading your document...</div>
+            <div>
+              {uploadProgress === 'compressing' ? 'Compressing document...' : 'Uploading your document...'}
+            </div>
             <div className="bar"><div className="fill" /></div>
           </div>
         )}

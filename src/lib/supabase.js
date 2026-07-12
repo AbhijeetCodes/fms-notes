@@ -34,7 +34,7 @@ export async function isModerator(email) {
 }
 
 const ALLOWED_EXTENSIONS = ['pdf', 'ppt', 'pptx', 'doc', 'docx', 'xls', 'xlsx'];
-const MAX_FILE_SIZE = 15 * 1024 * 1024;
+const MAX_FILE_SIZE = 50 * 1024 * 1024;
 
 export function validateFile(file) {
   const ext = file.name.split('.').pop().toLowerCase();
@@ -42,7 +42,7 @@ export function validateFile(file) {
     return `File type .${ext} is not allowed. Use: ${ALLOWED_EXTENSIONS.join(', ')}`;
   }
   if (file.size > MAX_FILE_SIZE) {
-    return `File is too large (${(file.size / 1024 / 1024).toFixed(1)}MB). Max is 15MB.`;
+    return `File is too large (${(file.size / 1024 / 1024).toFixed(1)}MB). Max is 50MB.`;
   }
   return null;
 }

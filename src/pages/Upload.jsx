@@ -185,7 +185,7 @@ export default function Upload() {
             onDrop={e => { e.preventDefault(); setDragover(false); if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]); }}
           >
             <div className="label">Drop a file here or click to browse</div>
-            <div className="hint">PDF, PPT, DOC, XLS — max 15MB</div>
+            <div className="hint">PDF, PPT, DOC, XLS — max 50MB</div>
             {file && <div className="selected-file">{file.name} ({(file.size / (1024 * 1024)).toFixed(1)} MB)</div>}
           </div>
           <input

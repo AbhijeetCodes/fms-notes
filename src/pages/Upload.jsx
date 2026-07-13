@@ -35,7 +35,11 @@ export default function Upload() {
   const availableCourses = semester
     ? semester === 'elective'
       ? courses.filter(c => c.kind === 'elective')
-      : courses.filter(c => c.semester === parseInt(semester))
+      : semester === 'notice'
+        ? courses.filter(c => c.kind === 'notice')
+        : semester === 'other'
+          ? courses.filter(c => c.kind === 'other')
+          : courses.filter(c => c.semester === parseInt(semester))
     : [];
 
   const groupedElectives = {};
@@ -106,11 +110,13 @@ export default function Upload() {
           <label>Semester / Category</label>
           <select value={semester} onChange={e => { setSemester(e.target.value); setCourseCode(''); }}>
             <option value="">Select...</option>
+            <option value="notice">Notice Board</option>
             <option value="1">Semester 1</option>
             <option value="2">Semester 2</option>
             <option value="3">Semester 3</option>
             <option value="4">Semester 4</option>
             <option value="elective">Electives</option>
+            <option value="other">Others</option>
           </select>
         </div>
 

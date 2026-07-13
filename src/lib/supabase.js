@@ -100,6 +100,17 @@ export async function fetchApprovedDocuments(courseCode) {
   return data;
 }
 
+export async function fetchNoticeBoardDocuments() {
+  const { data, error } = await supabase
+    .from('documents')
+    .select('*')
+    .eq('status', 'approved')
+    .or(`course_code.eq.NOTICE-BOARD,tags.cs.{pinned}`)
+    .order('created_at', { ascending: false });
+  if (error) throw error;
+  return data;
+}
+
 export async function fetchMyDocuments(userId) {
   const { data, error } = await supabase
     .from('documents')
@@ -137,6 +148,17 @@ export async function approveDocument(id, reviewerId) {
       reviewed_by: reviewerId,
       reviewed_at: new Date().toISOString(),
     })
+    .eq('id', id);
+  if (error) throw error;
+}
+
+export async function togglePinDocument(id, currentTags, pin) {
+  const tags = new Set(currentTags || []);
+  if (pin) tags.add('pinned');
+  else tags.delete('pinned');
+  const { error } = await supabase
+    .from('documents')
+    .update({ tags: Array.from(tags) })
     .eq('id', id);
   if (error) throw error;
 }
@@ -247,6 +269,17 @@ export async function fetchDocumentCounts() {
     counts[row.course_code] = (counts[row.course_code] || 0) + 1;
   }
   return counts;
+}
+
+export async function fetchDocumentsByTag(tag) {
+  const { data, error } = await supabase
+    .from('documents')
+    .select('*')
+    .eq('status', 'approved')
+    .contains('tags', [tag])
+    .order('created_at', { ascending: false });
+  if (error) throw error;
+  return data;
 }
 
 export async function searchDocuments(query) {

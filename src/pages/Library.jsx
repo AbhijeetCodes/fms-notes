@@ -145,7 +145,7 @@ export default function Library() {
         <div className="notice-board-header">
           <span style={{ fontSize: '1.1rem' }}>📌</span>
           <span className="notice-board-title">Notice Board</span>
-          <span className="notice-board-sub">Syllabus, timetables & important announcements pinned by admins</span>
+          <span className="notice-board-sub">Announcements pinned by admins</span>
         </div>
         {noticeDocs.length === 0 ? (
           <div className="notice-board-empty">No announcements pinned yet.</div>

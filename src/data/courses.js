@@ -1,6 +1,5 @@
 export const courses = [
-  // Notice Board and Others
-  { code: 'NOTICE-BOARD', name: 'Notice Board', semester: 'notice', kind: 'notice', area: null },
+  // Others
   { code: 'OTHERS', name: 'Other Documents', semester: 'other', kind: 'other', area: null },
 
   // Semester 1 — Core

@@ -150,32 +150,27 @@ export default function Library() {
         {noticeDocs.length === 0 ? (
           <div className="notice-board-empty">No announcements pinned yet.</div>
         ) : (
-          <div className="doc-list" style={{ marginTop: 0 }}>
+          <div className="notice-doc-list">
             {noticeDocs.map(doc => {
               const isPinned = doc.course_code !== 'NOTICE-BOARD';
               const course = getCourseByCode(doc.course_code);
               return (
-                <div key={doc.id} className="doc-card notice-card">
+                <div
+                  key={doc.id}
+                  className={`notice-row${downloading === doc.id ? ' downloading' : ''}`}
+                  onClick={() => handleDownload(doc)}
+                  title="Tap to download"
+                >
                   <span className={`file-badge ${doc.file_type}`}>{doc.file_type}</span>
-                  <div className="doc-info">
-                    <div className="title">
-                      {doc.title}
-                      {isPinned && <span className="status-badge approved" style={{ marginLeft: 8 }}>📌 Pinned</span>}
-                    </div>
-                    <div className="meta">
-                      {isPinned && course ? `${course.name} · ` : ''}{doc.uploader_name} &middot; {new Date(doc.created_at).toLocaleDateString()}
-                    </div>
-                    {doc.tags?.length > 0 && (
-                      <div className="tags">
-                        {doc.tags.filter(t => t !== 'pinned').map(t => <span key={t} className="tag">{t}</span>)}
-                      </div>
-                    )}
+                  <div className="notice-row-info">
+                    <span className="notice-row-title">{doc.title}</span>
+                    <span className="notice-row-meta">
+                      {isPinned && course ? `${course.name} · ` : ''}{doc.uploader_name} · {new Date(doc.created_at).toLocaleDateString('en-GB')}
+                    </span>
                   </div>
-                  <div className="doc-actions">
-                    <button className="btn btn-sm btn-primary" disabled={downloading === doc.id} onClick={() => handleDownload(doc)}>
-                      {downloading === doc.id ? 'Downloading...' : 'Download'}
-                    </button>
-                  </div>
+                  <span className="notice-row-dl">
+                    {downloading === doc.id ? '⏳' : '⬇'}
+                  </span>
                 </div>
               );
             })}

@@ -1,4 +1,8 @@
 export const courses = [
+  // Notice Board and Others
+  { code: 'NOTICE-BOARD', name: 'Notice Board', semester: 'notice', kind: 'notice', area: null },
+  { code: 'OTHERS', name: 'Other Documents', semester: 'other', kind: 'other', area: null },
+
   // Semester 1 — Core
   { code: 'MBAEX-8101', name: 'Organizational Behavior', semester: 1, kind: 'core', area: null },
   { code: 'MBAEX-8102', name: 'Data Analysis and Optimization', semester: 1, kind: 'core', area: null },

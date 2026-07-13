@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../App';
-import { fetchPendingDocuments, fetchAllDocuments, approveDocument, rejectDocument, previewDocument, fetchStorageUsed } from '../lib/supabase';
+import { fetchPendingDocuments, fetchAllDocuments, approveDocument, rejectDocument, previewDocument, fetchStorageUsed, togglePinDocument } from '../lib/supabase';
 import { getCourseByCode } from '../data/courses';
 
 function formatSize(bytes) {
@@ -81,6 +81,16 @@ export default function Admin() {
     setActing(null);
   };
 
+  const handlePinToggle = async (doc) => {
+    setActing(doc.id);
+    try {
+      const isPinned = doc.tags?.includes('pinned');
+      await togglePinDocument(doc.id, doc.tags, !isPinned);
+      await load();
+    } catch (err) { alert('Error: ' + err.message); }
+    setActing(null);
+  };
+
   const pct = Math.min(100, (storageUsed / STORAGE_LIMIT) * 100);
   const docs = tab === 'pending' ? pending : all;
 
@@ -139,7 +149,7 @@ export default function Admin() {
                   <button className="btn btn-sm" disabled={acting === doc.id} onClick={() => handlePreview(doc)}>
                     {acting === doc.id ? 'Loading...' : 'View'}
                   </button>
-                  {doc.status === 'pending' && (
+                  {doc.status === 'pending' ? (
                     <>
                       <button className="btn btn-sm btn-success" disabled={acting === doc.id} onClick={() => handleApprove(doc.id)}>
                         Approve
@@ -148,7 +158,11 @@ export default function Admin() {
                         Reject
                       </button>
                     </>
-                  )}
+                  ) : doc.status === 'approved' && doc.course_code !== 'NOTICE-BOARD' ? (
+                    <button className={`btn btn-sm ${doc.tags?.includes('pinned') ? 'btn-danger' : 'btn-primary'}`} disabled={acting === doc.id} onClick={() => handlePinToggle(doc)}>
+                      {doc.tags?.includes('pinned') ? 'Unpin' : 'Pin to Notice Board'}
+                    </button>
+                  ) : null}
                 </div>
               </div>
             );

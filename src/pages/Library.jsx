@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { courses, getCoursesBySemester, getElectivesByArea, ELECTIVE_AREAS } from '../data/courses';
-import { fetchDocumentCounts, searchDocuments } from '../lib/supabase';
+import { fetchDocumentCounts, searchDocuments, fetchNoticeBoardDocuments, fetchDocumentsByTag, downloadDocument } from '../lib/supabase';
 import { getCourseByCode } from '../data/courses';
 
 export default function Library() {
@@ -11,10 +11,26 @@ export default function Library() {
   const [searchResults, setSearchResults] = useState(null);
   const [searching, setSearching] = useState(false);
   const [openAreas, setOpenAreas] = useState({});
+  const [noticeDocs, setNoticeDocs] = useState([]);
+  const [downloading, setDownloading] = useState(null);
+  const [typeFilter, setTypeFilter] = useState(null);
+  const [typeFilterDocs, setTypeFilterDocs] = useState([]);
+  const [typeFilterLoading, setTypeFilterLoading] = useState(false);
 
   useEffect(() => {
     fetchDocumentCounts().then(setCounts).catch(() => {});
+    fetchNoticeBoardDocuments().then(setNoticeDocs).catch(() => {});
   }, []);
+
+  const handleDownload = async (doc) => {
+    setDownloading(doc.id);
+    try {
+      await downloadDocument(doc);
+    } catch (err) {
+      alert('Download failed: ' + err.message);
+    }
+    setDownloading(null);
+  };
 
   useEffect(() => {
     if (!search.trim()) { setSearchResults(null); return; }
@@ -37,6 +53,26 @@ export default function Library() {
   const toggleArea = (area) => {
     setOpenAreas(prev => ({ ...prev, [area]: !prev[area] }));
   };
+
+  const handleTypeFilter = async (tag) => {
+    if (typeFilter === tag) { setTypeFilter(null); setTypeFilterDocs([]); return; }
+    setTypeFilter(tag);
+    setTypeFilterLoading(true);
+    try {
+      const docs = await fetchDocumentsByTag(tag);
+      setTypeFilterDocs(docs);
+    } catch { setTypeFilterDocs([]); }
+    setTypeFilterLoading(false);
+  };
+
+  const TYPE_FILTERS = [
+    { tag: 'assignment', label: 'Assignments' },
+    { tag: 'past-paper', label: 'Past Papers' },
+    { tag: 'notes', label: 'Notes' },
+    { tag: 'slides', label: 'Slides' },
+    { tag: 'case-study', label: 'Case Studies' },
+    { tag: 'book', label: 'Books' },
+  ];
 
   if (searchResults) {
     return (
@@ -105,7 +141,98 @@ export default function Library() {
         />
       </div>
 
-      <div className="semester-tabs">
+      <div className="notice-board" style={{ marginTop: '2rem' }}>
+        <div className="notice-board-header">
+          <span style={{ fontSize: '1.1rem' }}>📌</span>
+          <span className="notice-board-title">Notice Board</span>
+          <span className="notice-board-sub">Syllabus, timetables & important announcements pinned by admins</span>
+        </div>
+        {noticeDocs.length === 0 ? (
+          <div className="notice-board-empty">No announcements pinned yet.</div>
+        ) : (
+          <div className="doc-list" style={{ marginTop: 0 }}>
+            {noticeDocs.map(doc => {
+              const isPinned = doc.course_code !== 'NOTICE-BOARD';
+              const course = getCourseByCode(doc.course_code);
+              return (
+                <div key={doc.id} className="doc-card notice-card">
+                  <span className={`file-badge ${doc.file_type}`}>{doc.file_type}</span>
+                  <div className="doc-info">
+                    <div className="title">
+                      {doc.title}
+                      {isPinned && <span className="status-badge approved" style={{ marginLeft: 8 }}>📌 Pinned</span>}
+                    </div>
+                    <div className="meta">
+                      {isPinned && course ? `${course.name} · ` : ''}{doc.uploader_name} &middot; {new Date(doc.created_at).toLocaleDateString()}
+                    </div>
+                    {doc.tags?.length > 0 && (
+                      <div className="tags">
+                        {doc.tags.filter(t => t !== 'pinned').map(t => <span key={t} className="tag">{t}</span>)}
+                      </div>
+                    )}
+                  </div>
+                  <div className="doc-actions">
+                    <button className="btn btn-sm btn-primary" disabled={downloading === doc.id} onClick={() => handleDownload(doc)}>
+                      {downloading === doc.id ? 'Downloading...' : 'Download'}
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      <div style={{ marginTop: '2rem' }}>
+        <div className="section-title">Browse by Type</div>
+        <div className="type-filter-chips">
+          {TYPE_FILTERS.map(({ tag, label }) => (
+            <button
+              key={tag}
+              className={`type-chip ${typeFilter === tag ? 'active' : ''}`}
+              onClick={() => handleTypeFilter(tag)}
+            >
+              {label}
+              {typeFilter === tag && ' ✕'}
+            </button>
+          ))}
+        </div>
+        {typeFilter && (
+          <div style={{ marginTop: 16 }}>
+            {typeFilterLoading ? (
+              <div className="loading">Loading...</div>
+            ) : typeFilterDocs.length === 0 ? (
+              <div className="empty-state" style={{ padding: '1.5rem' }}>
+                <p>No documents tagged "{typeFilter}" yet.</p>
+              </div>
+            ) : (
+              <div className="doc-list">
+                {typeFilterDocs.map(doc => {
+                  const course = getCourseByCode(doc.course_code);
+                  return (
+                    <Link key={doc.id} to={`/course/${doc.course_code}`} className="doc-card" style={{ textDecoration: 'none', color: 'inherit' }}>
+                      <span className={`file-badge ${doc.file_type}`}>{doc.file_type}</span>
+                      <div className="doc-info">
+                        <div className="title">{doc.title}</div>
+                        <div className="meta">
+                          {course?.name || doc.course_code} &middot; {doc.uploader_name} &middot; {new Date(doc.created_at).toLocaleDateString()}
+                        </div>
+                        {doc.tags?.length > 0 && (
+                          <div className="tags">
+                            {doc.tags.map(t => <span key={t} className="tag">{t}</span>)}
+                          </div>
+                        )}
+                      </div>
+                    </Link>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      <div className="semester-tabs" style={{ marginTop: '2rem' }}>
         {[1, 2, 3, 4].map(s => (
           <button
             key={s}
@@ -155,6 +282,19 @@ export default function Library() {
               </div>
             );
           })}
+        </>
+      )}
+
+      {counts['OTHERS'] > 0 && (
+        <>
+          <div className="section-title">Other Documents</div>
+          <div className="course-grid">
+            <Link to="/course/OTHERS" className="course-card" style={{ textDecoration: 'none' }}>
+              <span className="code">OTHERS</span>
+              <span className="name">Miscellaneous & Other Documents</span>
+              <span className="count">{counts['OTHERS']} document{counts['OTHERS'] !== 1 ? 's' : ''}</span>
+            </Link>
+          </div>
         </>
       )}
     </>

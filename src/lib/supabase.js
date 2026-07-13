@@ -33,7 +33,7 @@ export async function isModerator(email) {
   return data && data.length > 0;
 }
 
-const ALLOWED_EXTENSIONS = ['pdf', 'ppt', 'pptx', 'doc', 'docx', 'xls', 'xlsx'];
+const ALLOWED_EXTENSIONS = ['pdf', 'ppt', 'pptx', 'doc', 'docx', 'xls', 'xlsx', 'jpg', 'jpeg', 'png'];
 const MAX_FILE_SIZE = 50 * 1024 * 1024;
 
 export function validateFile(file) {
@@ -197,6 +197,9 @@ const MIME_TYPES = {
   docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
   xls: 'application/vnd.ms-excel',
   xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  jpg: 'image/jpeg',
+  jpeg: 'image/jpeg',
+  png: 'image/png',
 };
 
 /**

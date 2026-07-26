@@ -7,17 +7,19 @@ A free website for FMS Delhi MBA-Executive students to share and browse class no
 ## Features
 
 - Browse documents by semester and course (all 76 courses from the syllabus)
-- Upload PDFs, PPTs, DOCs, XLS files (max 15MB)
+- Upload PDFs, PPTs, DOCs, XLS, JPG, PNG files (max 50MB)
+- Share links/URLs alongside file uploads
 - Tag-based organization and search
 - Google sign-in required to upload
 - Moderation: uploads are held for review before becoming public
-- Admin panel with storage meter and approve/reject workflow
+- Admin panel with approve/reject workflow
 - Mobile-friendly, works great from WhatsApp links
 
 ## Tech Stack
 
 - **Frontend:** React + Vite, deployed to GitHub Pages
-- **Backend:** Supabase free tier (Postgres + Storage + Auth)
+- **Backend:** Supabase free tier (Postgres + Auth + Edge Functions)
+- **File Storage:** Google Drive (15 GB free, organized by course folder)
 - **Auth:** Google OAuth via Supabase
 - **Security:** Row Level Security (RLS) — no backend server needed
 
@@ -42,51 +44,64 @@ A free website for FMS Delhi MBA-Executive students to share and browse class no
 3. Click **New Query** again, paste `supabase/seed_courses.sql`, and click **Run**
 4. Verify: go to **Table Editor** — you should see `courses` (76 rows), `documents` (0 rows), `moderators` (0 rows)
 
-### Step 3: Create the Storage Bucket
+### Step 3: Set Up Google OAuth (for user sign-in)
 
-1. In Supabase dashboard, go to **Storage**
-2. Click **New Bucket**
-3. Name: `documents`
-4. **Public bucket: OFF** (keep private — RLS controls access)
-5. File size limit: `15728640` (15MB in bytes)
-6. Allowed MIME types (paste all):
-   ```
-   application/pdf
-   application/vnd.ms-powerpoint
-   application/vnd.openxmlformats-officedocument.presentationml.presentation
-   application/msword
-   application/vnd.openxmlformats-officedocument.wordprocessingml.document
-   application/vnd.ms-excel
-   application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
-   ```
+1. Go to [Google Cloud Console](https://console.cloud.google.com/) and create a project
+2. Go to **APIs & Services → Credentials**
+3. Click **Create Credentials → OAuth client ID**
+4. Application type: **Web application**
+5. Authorized redirect URIs: add `https://<your-supabase-project-id>.supabase.co/auth/v1/callback`
+6. Copy the **Client ID** and **Client Secret**
 
-### Step 4: Set Up Google OAuth
-
-1. Go to [Google Cloud Console](https://console.cloud.google.com/)
-2. Create a new project (or use an existing one)
-3. Go to **APIs & Services → Credentials**
-4. Click **Create Credentials → OAuth client ID**
-5. Application type: **Web application**
-6. Authorized redirect URIs: add `https://<your-supabase-project-id>.supabase.co/auth/v1/callback`
-7. Copy the **Client ID** and **Client Secret**
-
-### Step 5: Configure Supabase Auth
+### Step 4: Configure Supabase Auth
 
 1. In Supabase dashboard, go to **Authentication → Providers**
 2. Find **Google** and enable it
-3. Paste the Client ID and Client Secret from Step 4
+3. Paste the Client ID and Client Secret from Step 3
 4. Under **Authentication → URL Configuration**, add your site URL:
-   - Site URL: `https://abhijeetcodes.github.io/fms-notes/`
-   - Redirect URLs: add `https://abhijeetcodes.github.io/fms-notes/`
+   - Site URL: `https://<your-github-username>.github.io/fms-notes/`
+   - Redirect URLs: add the same URL
+
+### Step 5: Set Up Google Drive Storage
+
+Files are stored in Google Drive (15 GB free, no credit card needed), organized automatically into per-course subfolders.
+
+#### 5a — Create a Google Cloud project and enable Drive API
+1. In [Google Cloud Console](https://console.cloud.google.com/), select your project
+2. Go to **APIs & Services → Library** → search **Google Drive API** → **Enable**
+
+#### 5b — Create a Drive folder
+1. Go to [drive.google.com](https://drive.google.com) and create a folder (e.g. `FMS Notes`)
+2. Note the folder ID from the URL: `https://drive.google.com/drive/folders/<FOLDER_ID>`
+
+#### 5c — Get an OAuth2 refresh token
+1. In Google Cloud Console → **APIs & Services → Credentials** → **Create Credentials → OAuth 2.0 Client ID**
+2. Application type: **Web application**
+3. Authorized redirect URIs: add `https://developers.google.com/oauthplayground`
+4. Note the **Client ID** and **Client Secret**
+5. Go to [OAuth 2.0 Playground](https://developers.google.com/oauthplayground)
+6. Click the gear icon → check **Use your own OAuth credentials** → paste Client ID and Secret
+7. In the left panel, select **Drive API v3** → `https://www.googleapis.com/auth/drive` → **Authorize APIs**
+8. Sign in with the Google account that owns the Drive folder
+9. Click **Exchange authorization code for tokens** → copy the **Refresh token**
+
+#### 5d — Deploy the Edge Function
+1. Install the Supabase CLI: `npm install -g supabase`
+2. Log in: `npx supabase login`
+3. Add secrets in Supabase dashboard → **Edge Functions → Manage secrets**:
+   - `GOOGLE_CLIENT_ID` — from Step 5c
+   - `GOOGLE_CLIENT_SECRET` — from Step 5c
+   - `GOOGLE_REFRESH_TOKEN` — from Step 5c
+   - `GOOGLE_DRIVE_FOLDER_ID` — from Step 5b
+4. Deploy: `npx supabase functions deploy upload-to-drive`
 
 ### Step 6: Add GitHub Repo Variables
 
-1. Go to your repo: https://github.com/AbhijeetCodes/fms-notes
-2. **Settings → Secrets and variables → Actions → Variables tab**
-3. Add two **repository variables** (NOT secrets):
+1. Go to your repo → **Settings → Secrets and variables → Actions → Variables tab**
+2. Add two **repository variables** (NOT secrets):
    - `VITE_SUPABASE_URL` = your Project URL from Step 1
    - `VITE_SUPABASE_ANON_KEY` = your anon key from Step 1
-4. Go to **Actions** tab, find the failed deploy workflow, and click **Re-run all jobs**
+3. Go to **Actions** tab and re-run the deploy workflow
 
 ### Step 7: Add Moderators
 
@@ -97,12 +112,28 @@ A free website for FMS Delhi MBA-Executive students to share and browse class no
 
 ### Step 8: Test the Full Flow
 
-1. Open https://abhijeetcodes.github.io/fms-notes/
+1. Open your GitHub Pages URL
 2. Click **Sign In** → sign in with Google
 3. Go to **Upload** → pick a course, add a title, upload a small PDF
 4. Open the site in an incognito window → the document should NOT appear (it's pending)
 5. Sign back in → go to **Admin** → approve the document
 6. Refresh incognito → the document should now appear and be downloadable
+7. Check your Google Drive — the file should be in a subfolder named after the course code
+
+---
+
+## Migrating Existing Files to Google Drive
+
+If you have files already uploaded (stored as `.zip` in Supabase Storage), run the migration script to move them to Drive:
+
+```bash
+cp .env.migration.example .env
+# Fill in SUPABASE_URL, SUPABASE_SERVICE_KEY, GOOGLE_* values
+npm install googleapis dotenv
+node scripts/migrate-to-drive.js
+```
+
+The script is safe to re-run — already-migrated files are skipped.
 
 ---
 

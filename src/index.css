@@ -980,6 +980,95 @@ a:hover {
   }
 }
 
+/* ── Share Banner ── */
+.share-banner {
+  position: relative;
+  background: linear-gradient(135deg, #f0f4ff 0%, #e8f0fe 100%);
+  border: 1.5px solid #c2d4f0;
+  border-radius: var(--radius);
+  padding: 20px 40px 20px 20px;
+  margin-bottom: 20px;
+  animation: fadeIn 0.4s ease;
+}
+
+.share-banner-close {
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  background: none;
+  border: none;
+  font-size: 1.3rem;
+  color: #8a9ab5;
+  cursor: pointer;
+  line-height: 1;
+  padding: 4px;
+}
+
+.share-banner-close:hover {
+  color: #4a5568;
+}
+
+.share-banner-content {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.share-banner-icon {
+  font-size: 2rem;
+  flex-shrink: 0;
+}
+
+.share-banner-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.share-banner-text strong {
+  font-size: 0.95rem;
+  color: #1a365d;
+  display: block;
+  margin-bottom: 2px;
+}
+
+.share-banner-text p {
+  font-size: 0.84rem;
+  color: #4a6fa5;
+  margin: 0;
+  line-height: 1.4;
+}
+
+.share-banner-cta {
+  flex-shrink: 0;
+  padding: 8px 20px;
+  background: var(--primary);
+  color: #fff;
+  border-radius: var(--radius);
+  font-size: 0.875rem;
+  font-weight: 600;
+  white-space: nowrap;
+  transition: background 0.15s;
+}
+
+.share-banner-cta:hover {
+  background: var(--primary-hover);
+  text-decoration: none;
+  color: #fff;
+}
+
+@media (max-width: 600px) {
+  .share-banner-content {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .share-banner-cta {
+    align-self: stretch;
+    text-align: center;
+  }
+}
+
 /* ── Notice Board ── */
 .notice-board {
   background: #f8f9fb;

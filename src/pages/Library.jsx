@@ -4,6 +4,33 @@ import { courses, getCoursesBySemester, getElectivesByArea, ELECTIVE_AREAS } fro
 import { fetchDocumentCounts, searchDocuments, fetchNoticeBoardDocuments, fetchDocumentsByTag, downloadDocument } from '../lib/supabase';
 import { getCourseByCode } from '../data/courses';
 
+function ShareBanner() {
+  const [dismissed, setDismissed] = useState(() => localStorage.getItem('share-banner-dismissed') === '1');
+
+  if (dismissed) return null;
+
+  const handleDismiss = () => {
+    localStorage.setItem('share-banner-dismissed', '1');
+    setDismissed(true);
+  };
+
+  return (
+    <div className="share-banner">
+      <button className="share-banner-close" onClick={handleDismiss} aria-label="Dismiss">&times;</button>
+      <div className="share-banner-content">
+        <div className="share-banner-icon">&#128218;</div>
+        <div className="share-banner-text">
+          <strong>Got notes? Share them with your batch!</strong>
+          <p>Upload your lecture notes, slides, or past papers and help your friends ace their exams. It only takes a minute.</p>
+        </div>
+        <Link to="/upload" className="share-banner-cta">
+          Upload Notes &rarr;
+        </Link>
+      </div>
+    </div>
+  );
+}
+
 export default function Library() {
   const [semester, setSemester] = useState(1);
   const [counts, setCounts] = useState({});
@@ -131,6 +158,8 @@ export default function Library() {
           </p>
         </div>
       </div>
+
+      <ShareBanner />
 
       <div className="search-bar">
         <input

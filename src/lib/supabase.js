@@ -58,14 +58,15 @@ export async function uploadDocument({ file, courseCode, title, description, tag
   formData.append('courseCode', courseCode);
 
   const res = await fetch(
-    `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/upload-to-r2`,
+    `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/upload-to-drive`,
     { method: 'POST', headers: { Authorization: `Bearer ${session.access_token}` }, body: formData },
   );
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
     throw new Error(err.error || 'Upload failed');
   }
-  const { key } = await res.json();
+  const { fileId } = await res.json();
+  const key = `gdrive:${fileId}`;
 
   const { error: dbError } = await supabase.from('documents').insert({
     course_code: courseCode,
@@ -190,11 +191,6 @@ export async function rejectDocument(id, reviewerId, reason) {
   if (error) throw error;
 }
 
-// Returns a public R2 URL for a given key (new files only)
-export function getR2Url(key) {
-  return `${import.meta.env.VITE_R2_PUBLIC_URL}/${key}`;
-}
-
 // Legacy: signed URL from Supabase storage (for old .zip files)
 async function getSupabaseSignedUrl(filePath) {
   const { data, error } = await supabase.storage
@@ -202,6 +198,14 @@ async function getSupabaseSignedUrl(filePath) {
     .createSignedUrl(filePath, 60 * 60);
   if (error) throw error;
   return data.signedUrl;
+}
+
+function getDriveDownloadUrl(fileId) {
+  return `https://drive.usercontent.google.com/download?id=${fileId}&export=download&confirm=t`;
+}
+
+function getDriveViewUrl(fileId) {
+  return `https://drive.google.com/file/d/${fileId}/view`;
 }
 
 const MIME_TYPES = {
@@ -217,30 +221,28 @@ const MIME_TYPES = {
   png: 'image/png',
 };
 
-// Fetches file bytes — R2 (direct public URL) or legacy Supabase .zip (signed URL + unzip)
-async function fetchFileBlob(doc) {
-  if (doc.file_path.endsWith('.zip')) {
-    // Legacy: stored as a zip in Supabase storage
-    const url = await getSupabaseSignedUrl(doc.file_path);
-    const response = await fetch(url);
-    if (!response.ok) throw new Error('Failed to fetch file');
-    const arrayBuffer = await response.arrayBuffer();
-    const unzipped = unzipSync(new Uint8Array(arrayBuffer));
-    const fileNames = Object.keys(unzipped);
-    if (!fileNames.length) throw new Error('Zip archive is empty');
-    const fileData = unzipped[fileNames[0]];
-    const ext = doc.file_type || fileNames[0].split('.').pop().toLowerCase();
-    return new Blob([fileData], { type: MIME_TYPES[ext] || 'application/octet-stream' });
+export async function downloadDocument(doc) {
+  if (doc.file_path?.startsWith('gdrive:')) {
+    const fileId = doc.file_path.slice(7);
+    const a = document.createElement('a');
+    a.href = getDriveDownloadUrl(fileId);
+    a.target = '_blank';
+    a.rel = 'noopener noreferrer';
+    a.click();
+    return;
   }
 
-  // R2: serve directly from public URL
-  const response = await fetch(getR2Url(doc.file_path));
+  // Legacy: .zip stored in Supabase storage — decompress in-browser
+  const url = await getSupabaseSignedUrl(doc.file_path);
+  const response = await fetch(url);
   if (!response.ok) throw new Error('Failed to fetch file');
-  return response.blob();
-}
-
-export async function downloadDocument(doc) {
-  const blob = await fetchFileBlob(doc);
+  const arrayBuffer = await response.arrayBuffer();
+  const unzipped = unzipSync(new Uint8Array(arrayBuffer));
+  const fileNames = Object.keys(unzipped);
+  if (!fileNames.length) throw new Error('Zip archive is empty');
+  const fileData = unzipped[fileNames[0]];
+  const ext = doc.file_type || fileNames[0].split('.').pop().toLowerCase();
+  const blob = new Blob([fileData], { type: MIME_TYPES[ext] || 'application/octet-stream' });
   const objectUrl = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = objectUrl;
@@ -250,13 +252,23 @@ export async function downloadDocument(doc) {
 }
 
 export async function previewDocument(doc) {
-  if (!doc.file_path.endsWith('.zip')) {
-    // R2 file — open direct public URL
-    window.open(getR2Url(doc.file_path), '_blank');
+  if (doc.file_path?.startsWith('gdrive:')) {
+    const fileId = doc.file_path.slice(7);
+    window.open(getDriveViewUrl(fileId), '_blank');
     return null;
   }
-  // Legacy zip — decompress in-browser then open
-  const blob = await fetchFileBlob(doc);
+
+  // Legacy: .zip stored in Supabase storage — decompress in-browser
+  const url = await getSupabaseSignedUrl(doc.file_path);
+  const response = await fetch(url);
+  if (!response.ok) throw new Error('Failed to fetch file');
+  const arrayBuffer = await response.arrayBuffer();
+  const unzipped = unzipSync(new Uint8Array(arrayBuffer));
+  const fileNames = Object.keys(unzipped);
+  if (!fileNames.length) throw new Error('Zip archive is empty');
+  const fileData = unzipped[fileNames[0]];
+  const ext = doc.file_type || fileNames[0].split('.').pop().toLowerCase();
+  const blob = new Blob([fileData], { type: MIME_TYPES[ext] || 'application/octet-stream' });
   const objectUrl = URL.createObjectURL(blob);
   window.open(objectUrl, '_blank');
   setTimeout(() => URL.revokeObjectURL(objectUrl), 60000);

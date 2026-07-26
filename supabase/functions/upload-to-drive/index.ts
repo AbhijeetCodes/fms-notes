@@ -29,9 +29,14 @@ function pemToArrayBuffer(pem: string): ArrayBuffer {
 function b64url(data: string | ArrayBuffer): string {
   let str: string;
   if (typeof data === "string") {
-    str = btoa(unescape(encodeURIComponent(data)));
+    // ASCII-safe base64 for JSON payloads
+    str = btoa(data);
   } else {
-    str = btoa(String.fromCharCode(...new Uint8Array(data)));
+    // ArrayBuffer → base64 via loop (avoids spread stack limit)
+    const bytes = new Uint8Array(data);
+    let s = "";
+    for (let i = 0; i < bytes.length; i++) s += String.fromCharCode(bytes[i]);
+    str = btoa(s);
   }
   return str.replace(/\+/g, "-").replace(/\//g, "_").replace(/=/g, "");
 }
@@ -49,13 +54,18 @@ async function getAccessToken(clientEmail: string, privateKeyPem: string): Promi
 
   const signingInput = `${header}.${payload}`;
 
-  const key = await crypto.subtle.importKey(
-    "pkcs8",
-    pemToArrayBuffer(privateKeyPem),
-    { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" },
-    false,
-    ["sign"],
-  );
+  let key: CryptoKey;
+  try {
+    key = await crypto.subtle.importKey(
+      "pkcs8",
+      pemToArrayBuffer(privateKeyPem),
+      { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" },
+      false,
+      ["sign"],
+    );
+  } catch (e) {
+    throw new Error(`Private key import failed: ${e}`);
+  }
 
   const signature = await crypto.subtle.sign(
     "RSASSA-PKCS1-v1_5",
@@ -65,7 +75,7 @@ async function getAccessToken(clientEmail: string, privateKeyPem: string): Promi
 
   const jwt = `${signingInput}.${b64url(signature)}`;
 
-  const res = await fetch("https://oauth2.googleapis.com/token", {
+  const tokenRes = await fetch("https://oauth2.googleapis.com/token", {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams({
@@ -74,9 +84,9 @@ async function getAccessToken(clientEmail: string, privateKeyPem: string): Promi
     }),
   });
 
-  if (!res.ok) throw new Error(`Auth failed: ${await res.text()}`);
-  const { access_token } = await res.json();
-  return access_token;
+  const tokenBody = await tokenRes.json();
+  if (!tokenRes.ok) throw new Error(`Google auth failed: ${JSON.stringify(tokenBody)}`);
+  return tokenBody.access_token;
 }
 
 // ── Drive helpers ────────────────────────────────────────────────────────────
@@ -106,7 +116,6 @@ async function findOrCreateFolder(name: string, parentId: string, token: string)
   return id;
 }
 
-// Uses resumable upload — handles files of any size up to 50 MB
 async function uploadFile(file: File, folderId: string, token: string): Promise<string> {
   const initRes = await fetch(
     "https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable&fields=id",
@@ -135,17 +144,16 @@ async function uploadFile(file: File, folderId: string, token: string): Promise<
     },
     body: arrayBuffer,
   });
-  if (!uploadRes.ok) throw new Error(`Upload failed: ${await uploadRes.text()}`);
+  if (!uploadRes.ok) throw new Error(`File upload failed: ${await uploadRes.text()}`);
 
   const { id } = await uploadRes.json();
 
-  // Make file publicly readable (anyone with link)
   const permRes = await fetch(`https://www.googleapis.com/drive/v3/files/${id}/permissions`, {
     method: "POST",
     headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
     body: JSON.stringify({ role: "reader", type: "anyone" }),
   });
-  if (!permRes.ok) throw new Error(`Permission set failed: ${await permRes.text()}`);
+  if (!permRes.ok) throw new Error(`Permission failed: ${await permRes.text()}`);
 
   return id;
 }
@@ -155,37 +163,45 @@ async function uploadFile(file: File, folderId: string, token: string): Promise<
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { status: 204, headers: CORS_HEADERS });
 
-  const authHeader = req.headers.get("authorization");
-  if (!authHeader) return json({ error: "Unauthorized" }, 401);
-
-  const supabase = createClient(
-    Deno.env.get("SUPABASE_URL") ?? "",
-    Deno.env.get("SUPABASE_ANON_KEY") ?? "",
-    { global: { headers: { Authorization: authHeader } } },
-  );
-
-  const { data: { user }, error: authError } = await supabase.auth.getUser();
-  if (authError || !user) return json({ error: "Unauthorized" }, 401);
-
-  let formData: FormData;
   try {
-    formData = await req.formData();
-  } catch {
-    return json({ error: "Invalid form data" }, 400);
+    const authHeader = req.headers.get("authorization");
+    if (!authHeader) return json({ error: "Unauthorized" }, 401);
+
+    const supabase = createClient(
+      Deno.env.get("SUPABASE_URL") ?? "",
+      Deno.env.get("SUPABASE_ANON_KEY") ?? "",
+      { global: { headers: { Authorization: authHeader } } },
+    );
+
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) return json({ error: "Unauthorized" }, 401);
+
+    let formData: FormData;
+    try {
+      formData = await req.formData();
+    } catch {
+      return json({ error: "Invalid form data" }, 400);
+    }
+
+    const file = formData.get("file") as File | null;
+    const courseCode = formData.get("courseCode") as string | null;
+    if (!file || !courseCode) return json({ error: "Missing file or courseCode" }, 400);
+
+    const privateKey = (Deno.env.get("GOOGLE_PRIVATE_KEY") ?? "").replace(/\\n/g, "\n");
+    const clientEmail = Deno.env.get("GOOGLE_CLIENT_EMAIL") ?? "";
+    const rootFolderId = Deno.env.get("GOOGLE_DRIVE_FOLDER_ID") ?? "";
+
+    if (!privateKey || !clientEmail || !rootFolderId) {
+      return json({ error: "Missing Google Drive configuration" }, 500);
+    }
+
+    const token = await getAccessToken(clientEmail, privateKey);
+    const courseFolderId = await findOrCreateFolder(courseCode, rootFolderId, token);
+    const fileId = await uploadFile(file, courseFolderId, token);
+
+    return json({ fileId });
+  } catch (e) {
+    console.error("upload-to-drive error:", e);
+    return json({ error: e instanceof Error ? e.message : String(e) }, 500);
   }
-
-  const file = formData.get("file") as File | null;
-  const courseCode = formData.get("courseCode") as string | null;
-  if (!file || !courseCode) return json({ error: "Missing file or courseCode" }, 400);
-
-  // Private key may be stored with literal \n — normalise to actual newlines
-  const privateKey = (Deno.env.get("GOOGLE_PRIVATE_KEY") ?? "").replace(/\\n/g, "\n");
-  const clientEmail = Deno.env.get("GOOGLE_CLIENT_EMAIL") ?? "";
-  const rootFolderId = Deno.env.get("GOOGLE_DRIVE_FOLDER_ID") ?? "";
-
-  const token = await getAccessToken(clientEmail, privateKey);
-  const courseFolderId = await findOrCreateFolder(courseCode, rootFolderId, token);
-  const fileId = await uploadFile(file, courseFolderId, token);
-
-  return json({ fileId });
 });

@@ -79,7 +79,6 @@ export default function Upload() {
     e.preventDefault();
     if (!canSubmit) return;
     setSubmitting(true);
-    setUploadProgress('');
     setError(null);
     try {
       if (uploadType === 'link') {

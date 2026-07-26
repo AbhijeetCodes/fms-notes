@@ -13,80 +13,22 @@ function json(body: unknown, status = 200) {
   });
 }
 
-// ── Google auth ──────────────────────────────────────────────────────────────
+// ── Google OAuth2 (refresh token flow) ───────────────────────────────────────
 
-function pemToArrayBuffer(pem: string): ArrayBuffer {
-  const content = pem
-    .replace("-----BEGIN PRIVATE KEY-----", "")
-    .replace("-----END PRIVATE KEY-----", "")
-    .replace(/\s/g, "");
-  const binary = atob(content);
-  const buf = new Uint8Array(binary.length);
-  for (let i = 0; i < binary.length; i++) buf[i] = binary.charCodeAt(i);
-  return buf.buffer;
-}
-
-function b64url(data: string | ArrayBuffer): string {
-  let str: string;
-  if (typeof data === "string") {
-    // ASCII-safe base64 for JSON payloads
-    str = btoa(data);
-  } else {
-    // ArrayBuffer → base64 via loop (avoids spread stack limit)
-    const bytes = new Uint8Array(data);
-    let s = "";
-    for (let i = 0; i < bytes.length; i++) s += String.fromCharCode(bytes[i]);
-    str = btoa(s);
-  }
-  return str.replace(/\+/g, "-").replace(/\//g, "_").replace(/=/g, "");
-}
-
-async function getAccessToken(clientEmail: string, privateKeyPem: string): Promise<string> {
-  const now = Math.floor(Date.now() / 1000);
-  const header = b64url(JSON.stringify({ alg: "RS256", typ: "JWT" }));
-  const payload = b64url(JSON.stringify({
-    iss: clientEmail,
-    scope: "https://www.googleapis.com/auth/drive",
-    aud: "https://oauth2.googleapis.com/token",
-    exp: now + 3600,
-    iat: now,
-  }));
-
-  const signingInput = `${header}.${payload}`;
-
-  let key: CryptoKey;
-  try {
-    key = await crypto.subtle.importKey(
-      "pkcs8",
-      pemToArrayBuffer(privateKeyPem),
-      { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" },
-      false,
-      ["sign"],
-    );
-  } catch (e) {
-    throw new Error(`Private key import failed: ${e}`);
-  }
-
-  const signature = await crypto.subtle.sign(
-    "RSASSA-PKCS1-v1_5",
-    key,
-    new TextEncoder().encode(signingInput),
-  );
-
-  const jwt = `${signingInput}.${b64url(signature)}`;
-
-  const tokenRes = await fetch("https://oauth2.googleapis.com/token", {
+async function getAccessToken(clientId: string, clientSecret: string, refreshToken: string): Promise<string> {
+  const res = await fetch("https://oauth2.googleapis.com/token", {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams({
-      grant_type: "urn:ietf:params:oauth:grant-type:jwt-bearer",
-      assertion: jwt,
+      grant_type: "refresh_token",
+      client_id: clientId,
+      client_secret: clientSecret,
+      refresh_token: refreshToken,
     }),
   });
-
-  const tokenBody = await tokenRes.json();
-  if (!tokenRes.ok) throw new Error(`Google auth failed: ${JSON.stringify(tokenBody)}`);
-  return tokenBody.access_token;
+  const body = await res.json();
+  if (!res.ok) throw new Error(`Google auth failed: ${JSON.stringify(body)}`);
+  return body.access_token;
 }
 
 // ── Drive helpers ────────────────────────────────────────────────────────────
@@ -187,15 +129,16 @@ Deno.serve(async (req) => {
     const courseCode = formData.get("courseCode") as string | null;
     if (!file || !courseCode) return json({ error: "Missing file or courseCode" }, 400);
 
-    const privateKey = (Deno.env.get("GOOGLE_PRIVATE_KEY") ?? "").replace(/\\n/g, "\n");
-    const clientEmail = Deno.env.get("GOOGLE_CLIENT_EMAIL") ?? "";
+    const clientId = Deno.env.get("GOOGLE_CLIENT_ID") ?? "";
+    const clientSecret = Deno.env.get("GOOGLE_CLIENT_SECRET") ?? "";
+    const refreshToken = Deno.env.get("GOOGLE_REFRESH_TOKEN") ?? "";
     const rootFolderId = Deno.env.get("GOOGLE_DRIVE_FOLDER_ID") ?? "";
 
-    if (!privateKey || !clientEmail || !rootFolderId) {
+    if (!clientId || !clientSecret || !refreshToken || !rootFolderId) {
       return json({ error: "Missing Google Drive configuration" }, 500);
     }
 
-    const token = await getAccessToken(clientEmail, privateKey);
+    const token = await getAccessToken(clientId, clientSecret, refreshToken);
     const courseFolderId = await findOrCreateFolder(courseCode, rootFolderId, token);
     const fileId = await uploadFile(file, courseFolderId, token);
 

@@ -43,9 +43,10 @@ export default function MyUploads() {
         <div className="doc-list">
           {docs.map(doc => {
             const course = getCourseByCode(doc.course_code);
+            const isLink = !!doc.url && !doc.file_path;
             return (
               <div key={doc.id} className="doc-card">
-                <span className={`file-badge ${doc.file_type}`}>{doc.file_type}</span>
+                <span className={`file-badge ${isLink ? 'link' : doc.file_type}`}>{isLink ? 'link' : doc.file_type}</span>
                 <div className="doc-info">
                   <div className="title">
                     {doc.title}
@@ -56,6 +57,7 @@ export default function MyUploads() {
                   <div className="meta">
                     {course?.name || doc.course_code} &middot; {new Date(doc.created_at).toLocaleDateString()}
                   </div>
+                  {isLink && <div className="description link-url">{doc.url}</div>}
                   {doc.status === 'rejected' && doc.reject_reason && (
                     <div className="alert error" style={{ marginTop: 8, marginBottom: 0 }}>
                       Reason: {doc.reject_reason}

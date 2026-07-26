@@ -89,6 +89,25 @@ export async function uploadDocument({ file, courseCode, title, description, tag
   if (dbError) throw dbError;
 }
 
+export async function uploadLink({ url, courseCode, title, description, tags, user }) {
+  const { error: dbError } = await supabase.from('documents').insert({
+    course_code: courseCode,
+    title,
+    description: description || null,
+    url,
+    file_path: null,
+    file_name: null,
+    file_size: null,
+    file_type: null,
+    tags: tags.length ? tags : [],
+    uploader_id: user.id,
+    uploader_name: user.user_metadata?.full_name || user.email,
+    uploader_email: user.email,
+    status: 'pending',
+  });
+  if (dbError) throw dbError;
+}
+
 export async function fetchApprovedDocuments(courseCode) {
   const { data, error } = await supabase
     .from('documents')

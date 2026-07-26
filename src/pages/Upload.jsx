@@ -1,16 +1,18 @@
 import { useState, useRef } from 'react';
 import { useAuth } from '../App';
 import { courses, ELECTIVE_AREAS } from '../data/courses';
-import { signInWithGoogle, validateFile, uploadDocument } from '../lib/supabase';
+import { signInWithGoogle, validateFile, uploadDocument, uploadLink } from '../lib/supabase';
 
 const SUGGESTED_TAGS = ['notes', 'slides', 'past-paper', 'assignment', 'case-study', 'book'];
 
 export default function Upload() {
   const { user } = useAuth();
+  const [uploadType, setUploadType] = useState('file');
   const [semester, setSemester] = useState('');
   const [courseCode, setCourseCode] = useState('');
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
+  const [url, setUrl] = useState('');
   const [tags, setTags] = useState([]);
   const [tagInput, setTagInput] = useState('');
   const [file, setFile] = useState(null);
@@ -72,21 +74,30 @@ export default function Upload() {
     }
   };
 
+  const canSubmit = courseCode && title.trim() && (uploadType === 'file' ? file : url.trim());
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!courseCode || !title.trim() || !file) return;
+    if (!canSubmit) return;
     setSubmitting(true);
     setUploadProgress('');
     setError(null);
     try {
-      await uploadDocument({
-        file, courseCode, title: title.trim(), description: description.trim(), tags, user,
-        onProgress: setUploadProgress
-      });
-      setResult('Document submitted! It will appear in the library after a moderator approves it.');
+      if (uploadType === 'link') {
+        await uploadLink({
+          url: url.trim(), courseCode, title: title.trim(), description: description.trim(), tags, user,
+        });
+      } else {
+        await uploadDocument({
+          file, courseCode, title: title.trim(), description: description.trim(), tags, user,
+          onProgress: setUploadProgress
+        });
+      }
+      setResult('Submitted! It will appear in the library after a moderator approves it.');
       setCourseCode('');
       setTitle('');
       setDescription('');
+      setUrl('');
       setTags([]);
       setFile(null);
     } catch (err) {
@@ -97,13 +108,25 @@ export default function Upload() {
 
   return (
     <>
-      <h1 className="page-title">Upload Document</h1>
-      <p className="page-subtitle">Share notes, slides, or study materials with your classmates.</p>
+      <h1 className="page-title">Share with Classmates</h1>
+      <p className="page-subtitle">Upload a file or share a link — notes, slides, case study URLs, anything useful.</p>
 
       {result && <div className="alert success">{result}</div>}
       {error && <div className="alert error">{error}</div>}
 
       <form onSubmit={handleSubmit}>
+        <div className="form-group">
+          <label>What are you sharing?</label>
+          <div className="upload-type-toggle">
+            <button type="button" className={`upload-type-btn ${uploadType === 'file' ? 'active' : ''}`} onClick={() => setUploadType('file')}>
+              File Upload
+            </button>
+            <button type="button" className={`upload-type-btn ${uploadType === 'link' ? 'active' : ''}`} onClick={() => setUploadType('link')}>
+              Link / URL
+            </button>
+          </div>
+        </div>
+
         <div className="form-group">
           <label>Semester / Category</label>
           <select value={semester} onChange={e => { setSemester(e.target.value); setCourseCode(''); }}>
@@ -178,29 +201,37 @@ export default function Upload() {
           </div>
         </div>
 
-        <div className="form-group">
-          <label>File</label>
-          <div
-            className={`file-drop ${dragover ? 'dragover' : ''}`}
-            onClick={() => fileRef.current?.click()}
-            onDragOver={e => { e.preventDefault(); setDragover(true); }}
-            onDragLeave={() => setDragover(false)}
-            onDrop={e => { e.preventDefault(); setDragover(false); if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]); }}
-          >
-            <div className="label">Drop a file here or click to browse</div>
-            <div className="hint">PDF, PPT, DOC, XLS, JPG, PNG — max 50MB</div>
-            {file && <div className="selected-file">{file.name} ({(file.size / (1024 * 1024)).toFixed(1)} MB)</div>}
+        {uploadType === 'link' ? (
+          <div className="form-group">
+            <label>URL</label>
+            <input type="url" value={url} onChange={e => setUrl(e.target.value)} placeholder="https://example.com/case-study" />
+            <div className="hint" style={{ marginTop: 4 }}>Paste the full URL including https://</div>
           </div>
-          <input
-            ref={fileRef}
-            type="file"
-            accept=".pdf,.ppt,.pptx,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png"
-            style={{ display: 'none' }}
-            onChange={e => { if (e.target.files[0]) handleFile(e.target.files[0]); }}
-          />
-        </div>
+        ) : (
+          <div className="form-group">
+            <label>File</label>
+            <div
+              className={`file-drop ${dragover ? 'dragover' : ''}`}
+              onClick={() => fileRef.current?.click()}
+              onDragOver={e => { e.preventDefault(); setDragover(true); }}
+              onDragLeave={() => setDragover(false)}
+              onDrop={e => { e.preventDefault(); setDragover(false); if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]); }}
+            >
+              <div className="label">Drop a file here or click to browse</div>
+              <div className="hint">PDF, PPT, DOC, XLS, JPG, PNG — max 50MB</div>
+              {file && <div className="selected-file">{file.name} ({(file.size / (1024 * 1024)).toFixed(1)} MB)</div>}
+            </div>
+            <input
+              ref={fileRef}
+              type="file"
+              accept=".pdf,.ppt,.pptx,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png"
+              style={{ display: 'none' }}
+              onChange={e => { if (e.target.files[0]) handleFile(e.target.files[0]); }}
+            />
+          </div>
+        )}
 
-        {submitting && (
+        {submitting && uploadType === 'file' && (
           <div className="upload-progress">
             <div>
               {uploadProgress === 'compressing' ? 'Compressing document...' : 'Uploading your document...'}
@@ -209,8 +240,15 @@ export default function Upload() {
           </div>
         )}
 
-        <button type="submit" className="btn btn-primary" disabled={!courseCode || !title.trim() || !file || submitting}>
-          {submitting ? 'Uploading...' : 'Submit for Review'}
+        {submitting && uploadType === 'link' && (
+          <div className="upload-progress">
+            <div>Saving your link...</div>
+            <div className="bar"><div className="fill" /></div>
+          </div>
+        )}
+
+        <button type="submit" className="btn btn-primary" disabled={!canSubmit || submitting}>
+          {submitting ? 'Submitting...' : 'Submit for Review'}
         </button>
       </form>
     </>

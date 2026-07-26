@@ -447,6 +447,22 @@ a:hover {
   color: #059669;
 }
 
+.doc-card .file-badge.link,
+.notice-row .file-badge.link {
+  background: #f0f4ff;
+  color: #4f46e5;
+}
+
+.link-url {
+  font-size: 0.8rem;
+  color: #4f46e5;
+  word-break: break-all;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 400px;
+}
+
 .doc-info {
   flex: 1;
   min-width: 0;
@@ -625,6 +641,41 @@ a:hover {
   font-size: 0.8rem;
   color: var(--text-secondary);
   margin-top: 4px;
+}
+
+/* ── Upload Type Toggle ── */
+.upload-type-toggle {
+  display: flex;
+  gap: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  width: fit-content;
+}
+
+.upload-type-btn {
+  padding: 8px 20px;
+  border: none;
+  background: var(--surface);
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  color: var(--text-secondary);
+  font-family: inherit;
+  transition: all 0.15s;
+}
+
+.upload-type-btn:not(:last-child) {
+  border-right: 1px solid var(--border);
+}
+
+.upload-type-btn:hover {
+  color: var(--primary);
+}
+
+.upload-type-btn.active {
+  background: var(--primary);
+  color: #fff;
 }
 
 /* ── File Drop ── */

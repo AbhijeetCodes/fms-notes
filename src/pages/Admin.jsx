@@ -127,18 +127,20 @@ export default function Admin() {
         <div className="doc-list">
           {docs.map(doc => {
             const course = getCourseByCode(doc.course_code);
+            const isLink = !!doc.url && !doc.file_path;
             return (
               <div key={doc.id} className="doc-card">
-                <span className={`file-badge ${doc.file_type}`}>{doc.file_type}</span>
+                <span className={`file-badge ${isLink ? 'link' : doc.file_type}`}>{isLink ? 'link' : doc.file_type}</span>
                 <div className="doc-info">
                   <div className="title">
                     {doc.title}
                     <span className={`status-badge ${doc.status}`} style={{ marginLeft: 8 }}>{doc.status}</span>
                   </div>
                   <div className="meta">
-                    {course?.name || doc.course_code} &middot; {doc.uploader_name} ({doc.uploader_email}) &middot; {new Date(doc.created_at).toLocaleDateString()} &middot; {formatSize(doc.file_size)}
+                    {course?.name || doc.course_code} &middot; {doc.uploader_name} ({doc.uploader_email}) &middot; {new Date(doc.created_at).toLocaleDateString()}{doc.file_size ? ` · ${formatSize(doc.file_size)}` : ''}
                   </div>
                   {doc.description && <div className="description">{doc.description}</div>}
+                  {isLink && <div className="description link-url">{doc.url}</div>}
                   {doc.tags?.length > 0 && (
                     <div className="tags">
                       {doc.tags.map(t => <span key={t} className="tag">{t}</span>)}
@@ -146,9 +148,15 @@ export default function Admin() {
                   )}
                 </div>
                 <div className="doc-actions" style={{ flexDirection: 'column', gap: 4 }}>
-                  <button className="btn btn-sm" disabled={acting === doc.id} onClick={() => handlePreview(doc)}>
-                    {acting === doc.id ? 'Loading...' : 'View'}
-                  </button>
+                  {isLink ? (
+                    <a className="btn btn-sm" href={doc.url} target="_blank" rel="noopener noreferrer">
+                      Open Link
+                    </a>
+                  ) : (
+                    <button className="btn btn-sm" disabled={acting === doc.id} onClick={() => handlePreview(doc)}>
+                      {acting === doc.id ? 'Loading...' : 'View'}
+                    </button>
+                  )}
                   {doc.status === 'pending' ? (
                     <>
                       <button className="btn btn-sm btn-success" disabled={acting === doc.id} onClick={() => handleApprove(doc.id)}>

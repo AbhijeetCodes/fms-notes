@@ -1,5 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
-import { zipSync, unzipSync, strToU8 } from 'fflate';
+import { unzipSync } from 'fflate';
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
@@ -49,34 +49,29 @@ export function validateFile(file) {
 
 export async function uploadDocument({ file, courseCode, title, description, tags, user, onProgress }) {
   const ext = file.name.split('.').pop().toLowerCase();
-  const fileId = crypto.randomUUID();
-  const filePath = `${courseCode}/${fileId}.zip`;
 
-  // Notify caller that compression is starting
-  if (onProgress) onProgress('compressing');
-
-  // Read file into ArrayBuffer and compress into a zip archive
-  const arrayBuffer = await file.arrayBuffer();
-  const fileData = new Uint8Array(arrayBuffer);
-  const zipped = zipSync({ [file.name]: fileData }, { level: 6 });
-  const zippedBlob = new Blob([zipped], { type: 'application/zip' });
-
-  // Notify caller that upload is starting
   if (onProgress) onProgress('uploading');
 
-  const { error: storageError } = await supabase.storage
-    .from('documents')
-    .upload(filePath, zippedBlob, {
-      contentType: 'application/zip',
-    });
-  if (storageError) throw storageError;
+  const session = await getSession();
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('courseCode', courseCode);
 
-  // Store original file metadata in the database
+  const res = await fetch(
+    `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/upload-to-r2`,
+    { method: 'POST', headers: { Authorization: `Bearer ${session.access_token}` }, body: formData },
+  );
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || 'Upload failed');
+  }
+  const { key } = await res.json();
+
   const { error: dbError } = await supabase.from('documents').insert({
     course_code: courseCode,
     title,
     description: description || null,
-    file_path: filePath,
+    file_path: key,
     file_name: file.name,
     file_size: file.size,
     file_type: ext,
@@ -195,12 +190,13 @@ export async function rejectDocument(id, reviewerId, reason) {
   if (error) throw error;
 }
 
-export function getFileUrl(filePath) {
-  const { data } = supabase.storage.from('documents').getPublicUrl(filePath);
-  return data.publicUrl;
+// Returns a public R2 URL for a given key (new files only)
+export function getR2Url(key) {
+  return `${import.meta.env.VITE_R2_PUBLIC_URL}/${key}`;
 }
 
-export async function getSignedUrl(filePath) {
+// Legacy: signed URL from Supabase storage (for old .zip files)
+async function getSupabaseSignedUrl(filePath) {
   const { data, error } = await supabase.storage
     .from('documents')
     .createSignedUrl(filePath, 60 * 60);
@@ -221,61 +217,48 @@ const MIME_TYPES = {
   png: 'image/png',
 };
 
-/**
- * Fetch and decompress a document, returning a Blob with the original file content.
- * Handles both zipped (new) and unzipped (legacy) files transparently.
- */
-async function fetchAndDecompress(doc) {
-  const url = await getSignedUrl(doc.file_path);
-  const response = await fetch(url);
-  if (!response.ok) throw new Error('Failed to fetch file');
-
+// Fetches file bytes — R2 (direct public URL) or legacy Supabase .zip (signed URL + unzip)
+async function fetchFileBlob(doc) {
   if (doc.file_path.endsWith('.zip')) {
+    // Legacy: stored as a zip in Supabase storage
+    const url = await getSupabaseSignedUrl(doc.file_path);
+    const response = await fetch(url);
+    if (!response.ok) throw new Error('Failed to fetch file');
     const arrayBuffer = await response.arrayBuffer();
     const unzipped = unzipSync(new Uint8Array(arrayBuffer));
-    // Get the first (only) file from the archive
     const fileNames = Object.keys(unzipped);
-    if (fileNames.length === 0) throw new Error('Zip archive is empty');
+    if (!fileNames.length) throw new Error('Zip archive is empty');
     const fileData = unzipped[fileNames[0]];
     const ext = doc.file_type || fileNames[0].split('.').pop().toLowerCase();
-    const mimeType = MIME_TYPES[ext] || 'application/octet-stream';
-    return new Blob([fileData], { type: mimeType });
+    return new Blob([fileData], { type: MIME_TYPES[ext] || 'application/octet-stream' });
   }
 
-  // Legacy uncompressed file
-  return await response.blob();
+  // R2: serve directly from public URL
+  const response = await fetch(getR2Url(doc.file_path));
+  if (!response.ok) throw new Error('Failed to fetch file');
+  return response.blob();
 }
 
-/**
- * Download a document — decompresses if zipped, then triggers a browser download
- * with the original filename.
- */
 export async function downloadDocument(doc) {
-  const blob = await fetchAndDecompress(doc);
+  const blob = await fetchFileBlob(doc);
   const objectUrl = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = objectUrl;
   a.download = doc.file_name;
   a.click();
-  // Clean up the object URL after a short delay
   setTimeout(() => URL.revokeObjectURL(objectUrl), 5000);
 }
 
-/**
- * Preview a document — decompresses if zipped, then opens in a new tab.
- * Returns the object URL so the caller can revoke it later if needed.
- */
 export async function previewDocument(doc) {
   if (!doc.file_path.endsWith('.zip')) {
-    // Legacy file — just open the signed URL directly
-    const url = await getSignedUrl(doc.file_path);
-    window.open(url, '_blank');
+    // R2 file — open direct public URL
+    window.open(getR2Url(doc.file_path), '_blank');
     return null;
   }
-  const blob = await fetchAndDecompress(doc);
+  // Legacy zip — decompress in-browser then open
+  const blob = await fetchFileBlob(doc);
   const objectUrl = URL.createObjectURL(blob);
   window.open(objectUrl, '_blank');
-  // Clean up after a delay to let the tab load
   setTimeout(() => URL.revokeObjectURL(objectUrl), 60000);
   return objectUrl;
 }

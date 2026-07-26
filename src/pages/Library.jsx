@@ -123,9 +123,10 @@ export default function Library() {
           <div className="doc-list">
             {searchResults.map(doc => {
               const course = getCourseByCode(doc.course_code);
+              const isLink = !!doc.url && !doc.file_path;
               return (
                 <Link key={doc.id} to={`/course/${doc.course_code}`} className="doc-card" style={{ textDecoration: 'none', color: 'inherit' }}>
-                  <span className={`file-badge ${doc.file_type}`}>{doc.file_type}</span>
+                  <span className={`file-badge ${isLink ? 'link' : doc.file_type}`}>{isLink ? 'link' : doc.file_type}</span>
                   <div className="doc-info">
                     <div className="title">{doc.title}</div>
                     <div className="meta">
@@ -183,14 +184,15 @@ export default function Library() {
             {noticeDocs.map(doc => {
               const isPinned = doc.course_code !== 'NOTICE-BOARD';
               const course = getCourseByCode(doc.course_code);
+              const isLink = !!doc.url && !doc.file_path;
               return (
                 <div
                   key={doc.id}
                   className={`notice-row${downloading === doc.id ? ' downloading' : ''}`}
-                  onClick={() => handleDownload(doc)}
-                  title="Tap to download"
+                  onClick={() => isLink ? window.open(doc.url, '_blank', 'noopener,noreferrer') : handleDownload(doc)}
+                  title={isLink ? 'Tap to open link' : 'Tap to download'}
                 >
-                  <span className={`file-badge ${doc.file_type}`}>{doc.file_type}</span>
+                  <span className={`file-badge ${isLink ? 'link' : doc.file_type}`}>{isLink ? 'link' : doc.file_type}</span>
                   <div className="notice-row-info">
                     <span className="notice-row-title">{doc.title}</span>
                     <span className="notice-row-meta">
@@ -198,7 +200,7 @@ export default function Library() {
                     </span>
                   </div>
                   <span className="notice-row-dl">
-                    {downloading === doc.id ? '⏳' : '⬇'}
+                    {downloading === doc.id ? '⏳' : isLink ? '↗' : '⬇'}
                   </span>
                 </div>
               );
@@ -233,9 +235,10 @@ export default function Library() {
               <div className="doc-list">
                 {typeFilterDocs.map(doc => {
                   const course = getCourseByCode(doc.course_code);
+                  const isLink = !!doc.url && !doc.file_path;
                   return (
                     <Link key={doc.id} to={`/course/${doc.course_code}`} className="doc-card" style={{ textDecoration: 'none', color: 'inherit' }}>
-                      <span className={`file-badge ${doc.file_type}`}>{doc.file_type}</span>
+                      <span className={`file-badge ${isLink ? 'link' : doc.file_type}`}>{isLink ? 'link' : doc.file_type}</span>
                       <div className="doc-info">
                         <div className="title">{doc.title}</div>
                         <div className="meta">

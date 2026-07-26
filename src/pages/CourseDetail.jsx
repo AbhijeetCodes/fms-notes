@@ -75,30 +75,40 @@ export default function CourseDetail() {
         </div>
       ) : (
         <div className="doc-list">
-          {filtered.map(doc => (
-            <div key={doc.id} className="doc-card">
-              <span className={`file-badge ${doc.file_type}`}>{doc.file_type}</span>
-              <div className="doc-info">
-                <div className="title">{doc.title}</div>
-                <div className="meta">
-                  {doc.uploader_name} &middot; {new Date(doc.created_at).toLocaleDateString()} &middot; {formatSize(doc.file_size)}
-                </div>
-                {doc.description && <div className="description">{doc.description}</div>}
-                {doc.tags?.length > 0 && (
-                  <div className="tags">
-                    {doc.tags.map(t => (
-                      <button key={t} className="tag" onClick={() => setTagFilter(t)}>{t}</button>
-                    ))}
+          {filtered.map(doc => {
+            const isLink = !!doc.url && !doc.file_path;
+            return (
+              <div key={doc.id} className="doc-card">
+                <span className={`file-badge ${isLink ? 'link' : doc.file_type}`}>{isLink ? 'link' : doc.file_type}</span>
+                <div className="doc-info">
+                  <div className="title">{doc.title}</div>
+                  <div className="meta">
+                    {doc.uploader_name} &middot; {new Date(doc.created_at).toLocaleDateString()}{doc.file_size ? ` · ${formatSize(doc.file_size)}` : ''}
                   </div>
-                )}
+                  {doc.description && <div className="description">{doc.description}</div>}
+                  {isLink && <div className="description link-url">{doc.url}</div>}
+                  {doc.tags?.length > 0 && (
+                    <div className="tags">
+                      {doc.tags.map(t => (
+                        <button key={t} className="tag" onClick={() => setTagFilter(t)}>{t}</button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <div className="doc-actions">
+                  {isLink ? (
+                    <a className="btn btn-sm btn-primary" href={doc.url} target="_blank" rel="noopener noreferrer">
+                      Open Link
+                    </a>
+                  ) : (
+                    <button className="btn btn-sm btn-primary" disabled={downloading === doc.id} onClick={() => handleDownload(doc)}>
+                      {downloading === doc.id ? 'Downloading...' : 'Download'}
+                    </button>
+                  )}
+                </div>
               </div>
-              <div className="doc-actions">
-                <button className="btn btn-sm btn-primary" disabled={downloading === doc.id} onClick={() => handleDownload(doc)}>
-                  {downloading === doc.id ? 'Downloading...' : 'Download'}
-                </button>
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </>

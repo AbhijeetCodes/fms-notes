@@ -42,7 +42,8 @@ A free website for FMS Delhi MBA-Executive students to share and browse class no
 1. In Supabase dashboard, go to **SQL Editor**
 2. Click **New Query**, paste the entire contents of `supabase/schema.sql`, and click **Run**
 3. Click **New Query** again, paste `supabase/seed_courses.sql`, and click **Run**
-4. Verify: go to **Table Editor** — you should see `courses` (76 rows), `documents` (0 rows), `moderators` (0 rows)
+4. Click **New Query** again, paste `supabase/migration_add_events.sql`, and click **Run** — this creates the `events` table behind the deadline calendar. Skipping it makes event submission fail with `Could not find the table 'public.events' in the schema cache`.
+5. Verify: go to **Table Editor** — you should see `courses` (76 rows), `documents` (0 rows), `moderators` (0 rows), `events` (0 rows)
 
 ### Step 3: Set Up Google OAuth (for user sign-in)
 

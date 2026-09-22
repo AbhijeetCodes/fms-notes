@@ -28,16 +28,19 @@ create index if not exists idx_events_course on public.events(course_code);
 alter table public.events enable row level security;
 
 -- Public: read approved events only
+drop policy if exists "Anyone can read approved events" on public.events;
 create policy "Anyone can read approved events"
   on public.events for select
   using (status = 'approved');
 
 -- Authenticated users: read own events (any status)
+drop policy if exists "Users can read own events" on public.events;
 create policy "Users can read own events"
   on public.events for select
   using (auth.uid() = created_by);
 
 -- Moderators: read all events
+drop policy if exists "Moderators can read all events" on public.events;
 create policy "Moderators can read all events"
   on public.events for select
   using (
@@ -48,6 +51,7 @@ create policy "Moderators can read all events"
   );
 
 -- Authenticated users: submit events for review
+drop policy if exists "Authenticated users can add events" on public.events;
 create policy "Authenticated users can add events"
   on public.events for insert
   with check (
@@ -56,6 +60,7 @@ create policy "Authenticated users can add events"
   );
 
 -- Moderators: approve / reject / edit
+drop policy if exists "Moderators can update events" on public.events;
 create policy "Moderators can update events"
   on public.events for update
   using (
@@ -72,6 +77,7 @@ create policy "Moderators can update events"
   );
 
 -- Moderators: delete
+drop policy if exists "Moderators can delete events" on public.events;
 create policy "Moderators can delete events"
   on public.events for delete
   using (

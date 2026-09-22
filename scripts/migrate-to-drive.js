@@ -86,7 +86,7 @@ async function uploadToDrive(buffer, fileName, mimeType, folderId) {
 async function migrate() {
   const { data: docs, error } = await supabase
     .from('documents')
-    .select('id, file_path, file_name, file_type, course_code')
+    .select('id, file_path, file_name, file_type, course_code, courses(name)')
     .not('file_path', 'is', null);
 
   if (error) throw error;
@@ -126,7 +126,9 @@ async function migrate() {
       }
 
       const mimeType = MIME_TYPES[ext] ?? 'application/octet-stream';
-      const courseFolderId = await findOrCreateFolder(doc.course_code, rootFolderId);
+      const courseName = doc.courses?.name;
+      const folderName = courseName ? `${doc.course_code} - ${courseName}` : doc.course_code;
+      const courseFolderId = await findOrCreateFolder(folderName, rootFolderId);
       const fileId = await uploadToDrive(fileData, fileName, mimeType, courseFolderId);
 
       const { error: updateErr } = await supabase

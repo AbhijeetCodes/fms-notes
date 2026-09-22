@@ -127,6 +127,7 @@ Deno.serve(async (req) => {
 
     const file = formData.get("file") as File | null;
     const courseCode = formData.get("courseCode") as string | null;
+    const courseName = formData.get("courseName") as string | null;
     if (!file || !courseCode) return json({ error: "Missing file or courseCode" }, 400);
 
     const clientId = Deno.env.get("GOOGLE_CLIENT_ID") ?? "";
@@ -139,7 +140,8 @@ Deno.serve(async (req) => {
     }
 
     const token = await getAccessToken(clientId, clientSecret, refreshToken);
-    const courseFolderId = await findOrCreateFolder(courseCode, rootFolderId, token);
+    const folderName = courseName ? `${courseCode} - ${courseName}` : courseCode;
+    const courseFolderId = await findOrCreateFolder(folderName, rootFolderId, token);
     const fileId = await uploadFile(file, courseFolderId, token);
 
     return json({ fileId });

@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../App';
-import { fetchPendingDocuments, fetchAllDocuments, approveDocument, rejectDocument, previewDocument, fetchStorageUsed, togglePinDocument } from '../lib/supabase';
+import { fetchPendingDocuments, fetchAllDocuments, approveDocument, rejectDocument, previewDocument, fetchStorageUsed, togglePinDocument, fetchAllEvents, approveEvent, rejectEvent, deleteEvent } from '../lib/supabase';
 import { getCourseByCode } from '../data/courses';
+import { getEventType } from '../data/eventTypes';
+import { formatDayDate, formatTime } from '../lib/dates';
 
 function formatSize(bytes) {
   if (bytes < 1024) return bytes + ' B';
@@ -16,6 +18,7 @@ export default function Admin() {
   const [tab, setTab] = useState('pending');
   const [pending, setPending] = useState([]);
   const [all, setAll] = useState([]);
+  const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [storageUsed, setStorageUsed] = useState(0);
   const [rejectModal, setRejectModal] = useState(null);
@@ -25,14 +28,16 @@ export default function Admin() {
   const load = async () => {
     setLoading(true);
     try {
-      const [p, a, s] = await Promise.all([
+      const [p, a, s, e] = await Promise.all([
         fetchPendingDocuments(),
         fetchAllDocuments(),
         fetchStorageUsed(),
+        fetchAllEvents(),
       ]);
       setPending(p);
       setAll(a);
       setStorageUsed(s);
+      setEvents(e);
     } catch {}
     setLoading(false);
   };
@@ -91,8 +96,40 @@ export default function Admin() {
     setActing(null);
   };
 
+  const handleApproveEvent = async (id) => {
+    setActing(id);
+    try {
+      const reviewerId = isValidUUID(user.id) ? user.id : null;
+      await approveEvent(id, reviewerId);
+      await load();
+    } catch (err) { alert('Error: ' + err.message); }
+    setActing(null);
+  };
+
+  const handleRejectEvent = async (id) => {
+    const reason = window.prompt('Reason for rejecting (optional):') ?? null;
+    setActing(id);
+    try {
+      const reviewerId = isValidUUID(user.id) ? user.id : null;
+      await rejectEvent(id, reviewerId, reason);
+      await load();
+    } catch (err) { alert('Error: ' + err.message); }
+    setActing(null);
+  };
+
+  const handleDeleteEvent = async (event) => {
+    if (!window.confirm(`Delete "${event.title}" permanently?`)) return;
+    setActing(event.id);
+    try {
+      await deleteEvent(event.id);
+      await load();
+    } catch (err) { alert('Error: ' + err.message); }
+    setActing(null);
+  };
+
   const pct = Math.min(100, (storageUsed / STORAGE_LIMIT) * 100);
   const docs = tab === 'pending' ? pending : all;
+  const pendingEvents = events.filter(e => e.status === 'pending');
 
   if (loading) return <div className="loading">Loading...</div>;
 
@@ -116,9 +153,63 @@ export default function Admin() {
         <button className={`semester-tab ${tab === 'all' ? 'active' : ''}`} onClick={() => setTab('all')}>
           All Documents ({all.length})
         </button>
+        <button className={`semester-tab ${tab === 'events' ? 'active' : ''}`} onClick={() => setTab('events')}>
+          Calendar ({pendingEvents.length})
+        </button>
       </div>
 
-      {docs.length === 0 ? (
+      {tab === 'events' ? (
+        events.length === 0 ? (
+          <div className="empty-state">
+            <div className="icon">&#128197;</div>
+            <p>No calendar events submitted yet.</p>
+          </div>
+        ) : (
+          <div className="event-list">
+            {events.map(ev => {
+              const type = getEventType(ev.event_type);
+              const course = ev.course_code ? getCourseByCode(ev.course_code) : null;
+              const time = formatTime(ev.event_time);
+              return (
+                <div key={ev.id} className={`event-row ${ev.event_type}`}>
+                  <span className="event-row-icon">{type.icon}</span>
+                  <div className="event-row-info">
+                    <div className="event-row-title">
+                      {ev.title}
+                      <span className={`status-badge ${ev.status}`}>{ev.status}</span>
+                    </div>
+                    <div className="event-row-meta">
+                      {formatDayDate(ev.event_date)}{time ? ` · ${time}` : ''}
+                      {course ? ` · ${course.name}` : ''}
+                      {ev.location ? ` · ${ev.location}` : ''}
+                      {' · '}{ev.created_by_name}{ev.created_by_email ? ` (${ev.created_by_email})` : ''}
+                    </div>
+                    {ev.description && <div className="event-row-desc">{ev.description}</div>}
+                    {ev.status === 'rejected' && ev.reject_reason && (
+                      <div className="event-row-desc">Rejected: {ev.reject_reason}</div>
+                    )}
+                  </div>
+                  <div className="doc-actions" style={{ flexDirection: 'column', gap: 4 }}>
+                    {ev.status !== 'approved' && (
+                      <button className="btn btn-sm btn-success" disabled={acting === ev.id} onClick={() => handleApproveEvent(ev.id)}>
+                        Approve
+                      </button>
+                    )}
+                    {ev.status !== 'rejected' && (
+                      <button className="btn btn-sm" disabled={acting === ev.id} onClick={() => handleRejectEvent(ev.id)}>
+                        Reject
+                      </button>
+                    )}
+                    <button className="btn btn-sm btn-danger" disabled={acting === ev.id} onClick={() => handleDeleteEvent(ev)}>
+                      Delete
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )
+      ) : docs.length === 0 ? (
         <div className="empty-state">
           <div className="icon">&#9989;</div>
           <p>{tab === 'pending' ? 'No pending documents.' : 'No documents yet.'}</p>

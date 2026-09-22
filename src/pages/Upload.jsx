@@ -1,7 +1,8 @@
 import { useState, useRef } from 'react';
 import { useAuth } from '../App';
 import { courses, ELECTIVE_AREAS } from '../data/courses';
-import { signInWithGoogle, validateFile, uploadDocument, uploadLink } from '../lib/supabase';
+import { validateFile, uploadDocument, uploadLink } from '../lib/supabase';
+import GoogleSignIn from '../components/GoogleSignIn';
 
 const SUGGESTED_TAGS = ['notes', 'slides', 'past-paper', 'assignment', 'case-study', 'book'];
 
@@ -25,10 +26,13 @@ export default function Upload() {
   if (!user) {
     return (
       <div className="sign-in-prompt">
-        <p>Sign in with your Google account to upload and share documents with your classmates.</p>
-        <button className="btn btn-primary" onClick={() => signInWithGoogle()}>
-          Sign in with Google
-        </button>
+        <h2>One sign-in and you&rsquo;re in</h2>
+        <p>
+          Anyone in the batch can upload here. Sign in with Google so your classmates
+          know who shared what — that&rsquo;s the only thing we ask for.
+        </p>
+        <GoogleSignIn />
+        <p className="fineprint">We only read your name and email. Nothing is posted anywhere.</p>
       </div>
     );
   }
@@ -86,8 +90,9 @@ export default function Upload() {
           url: url.trim(), courseCode, title: title.trim(), description: description.trim(), tags, user,
         });
       } else {
+        const courseName = courses.find(c => c.code === courseCode)?.name || '';
         await uploadDocument({
-          file, courseCode, title: title.trim(), description: description.trim(), tags, user,
+          file, courseCode, courseName, title: title.trim(), description: description.trim(), tags, user,
         });
       }
       setResult('Submitted! It will appear in the library after a moderator approves it.');
@@ -105,8 +110,8 @@ export default function Upload() {
 
   return (
     <>
-      <h1 className="page-title">Share with Classmates</h1>
-      <p className="page-subtitle">Upload a file or share a link — notes, slides, case study URLs, anything useful.</p>
+      <h1 className="page-title">Share with your batch</h1>
+      <p className="page-subtitle">A file or a link — notes, slides, past papers, case study URLs. A moderator waves it through and everyone gets it.</p>
 
       {result && <div className="alert success">{result}</div>}
       {error && <div className="alert error">{error}</div>}

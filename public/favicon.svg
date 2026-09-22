@@ -1,14 +1,10 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48">
-  <defs>
-    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#0c2340"/>
-      <stop offset="100%" style="stop-color:#1a365d"/>
-    </linearGradient>
-    <linearGradient id="gold" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#c5960c"/>
-      <stop offset="100%" style="stop-color:#f0d060"/>
-    </linearGradient>
-  </defs>
-  <rect width="48" height="48" rx="10" fill="url(#bg)"/>
-  <text x="24" y="32" text-anchor="middle" font-family="Arial,sans-serif" font-weight="900" font-size="16" fill="url(#gold)">FMS</text>
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="112" fill="#66001f"/>
+  <!-- Two leaves of an open book, echoing the Library tab icon -->
+  <g fill="none" stroke="#ffffff" stroke-width="26" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M150 150h96v212h-96z"/>
+    <path d="M266 150h96v212h-96z"/>
+  </g>
+  <rect x="150" y="150" width="96" height="60" fill="#ffffff"/>
+  <rect x="266" y="150" width="96" height="60" fill="#e5809d"/>
 </svg>

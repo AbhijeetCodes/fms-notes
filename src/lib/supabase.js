@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import { unzipSync } from 'fflate';
+import { todayISO } from './dates';
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
@@ -47,7 +48,7 @@ export function validateFile(file) {
   return null;
 }
 
-export async function uploadDocument({ file, courseCode, title, description, tags, user, onProgress }) {
+export async function uploadDocument({ file, courseCode, courseName, title, description, tags, user, onProgress }) {
   const ext = file.name.split('.').pop().toLowerCase();
 
   if (onProgress) onProgress('uploading');
@@ -56,6 +57,7 @@ export async function uploadDocument({ file, courseCode, title, description, tag
   const formData = new FormData();
   formData.append('file', file);
   formData.append('courseCode', courseCode);
+  if (courseName) formData.append('courseName', courseName);
 
   const res = await fetch(
     `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/upload-to-drive`,
@@ -318,4 +320,102 @@ export async function fetchStorageUsed() {
     .in('status', ['pending', 'approved']);
   if (error) throw error;
   return data.reduce((sum, r) => sum + (r.file_size || 0), 0);
+}
+
+// ── Calendar events ──────────────────────────────────────────────────────────
+
+export async function createEvent({ title, description, courseCode, eventType, eventDate, eventTime, location, user }) {
+  const { error } = await supabase.from('events').insert({
+    title,
+    description: description || null,
+    course_code: courseCode || null,
+    event_type: eventType,
+    event_date: eventDate,
+    event_time: eventTime || null,
+    location: location || null,
+    created_by: user.id,
+    created_by_name: user.user_metadata?.full_name || user.email,
+    created_by_email: user.email,
+    status: 'pending',
+  });
+  if (error) throw error;
+}
+
+export async function fetchApprovedEvents() {
+  const { data, error } = await supabase
+    .from('events')
+    .select('*')
+    .eq('status', 'approved')
+    .order('event_date', { ascending: true })
+    .order('event_time', { ascending: true, nullsFirst: true });
+  if (error) throw error;
+  return data;
+}
+
+export async function fetchUpcomingEvents({ from = todayISO(), limit = 50 } = {}) {
+  const { data, error } = await supabase
+    .from('events')
+    .select('*')
+    .eq('status', 'approved')
+    .gte('event_date', from)
+    .order('event_date', { ascending: true })
+    .order('event_time', { ascending: true, nullsFirst: true })
+    .limit(limit);
+  if (error) throw error;
+  return data;
+}
+
+export async function fetchMyEvents(userId) {
+  const { data, error } = await supabase
+    .from('events')
+    .select('*')
+    .eq('created_by', userId)
+    .order('event_date', { ascending: true });
+  if (error) throw error;
+  return data;
+}
+
+export async function fetchPendingEvents() {
+  const { data, error } = await supabase
+    .from('events')
+    .select('*')
+    .eq('status', 'pending')
+    .order('event_date', { ascending: true });
+  if (error) throw error;
+  return data;
+}
+
+export async function fetchAllEvents() {
+  const { data, error } = await supabase
+    .from('events')
+    .select('*')
+    .order('event_date', { ascending: false });
+  if (error) throw error;
+  return data;
+}
+
+export async function approveEvent(id, reviewerId) {
+  const { error } = await supabase
+    .from('events')
+    .update({ status: 'approved', reviewed_by: reviewerId, reviewed_at: new Date().toISOString() })
+    .eq('id', id);
+  if (error) throw error;
+}
+
+export async function rejectEvent(id, reviewerId, reason) {
+  const { error } = await supabase
+    .from('events')
+    .update({
+      status: 'rejected',
+      reject_reason: reason || null,
+      reviewed_by: reviewerId,
+      reviewed_at: new Date().toISOString(),
+    })
+    .eq('id', id);
+  if (error) throw error;
+}
+
+export async function deleteEvent(id) {
+  const { error } = await supabase.from('events').delete().eq('id', id);
+  if (error) throw error;
 }

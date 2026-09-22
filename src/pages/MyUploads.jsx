@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../App';
-import { signInWithGoogle, fetchMyDocuments } from '../lib/supabase';
+import { fetchMyDocuments } from '../lib/supabase';
+import GoogleSignIn from '../components/GoogleSignIn';
 import { getCourseByCode } from '../data/courses';
 
 export default function MyUploads() {
@@ -20,8 +21,9 @@ export default function MyUploads() {
   if (!user) {
     return (
       <div className="sign-in-prompt">
-        <p>Sign in to see your uploaded documents.</p>
-        <button className="btn btn-primary" onClick={() => signInWithGoogle()}>Sign in with Google</button>
+        <h2>Sign in to see your uploads</h2>
+        <p>Your submissions and their review status live here once you sign in.</p>
+        <GoogleSignIn />
       </div>
     );
   }
@@ -36,7 +38,7 @@ export default function MyUploads() {
       {docs.length === 0 ? (
         <div className="empty-state">
           <div className="icon">&#128196;</div>
-          <p>You haven't uploaded anything yet.</p>
+          <p>You haven&rsquo;t shared anything yet.</p>
           <Link to="/upload" className="btn btn-primary" style={{ marginTop: 16 }}>Upload your first document</Link>
         </div>
       ) : (

@@ -42,7 +42,7 @@ export default function CourseDetail() {
 
   return (
     <>
-      <Link to="/" className="back-link">&#8592; Back to Library</Link>
+      <Link to="/" className="back-link">&#8592; Back to library</Link>
       {course ? (
         <>
           <h1 className="page-title">{course.name}</h1>
@@ -55,8 +55,8 @@ export default function CourseDetail() {
       {allTags.length > 0 && (
         <div className="tags" style={{ marginBottom: 16 }}>
           {tagFilter && (
-            <button className="tag" style={{ background: 'var(--accent)', color: 'white' }} onClick={() => setTagFilter(null)}>
-              &#10005; {tagFilter}
+            <button className="tag tag-active" onClick={() => setTagFilter(null)} aria-pressed="true">
+              {tagFilter} &#10005;
             </button>
           )}
           {allTags.filter(t => t !== tagFilter).map(t => (

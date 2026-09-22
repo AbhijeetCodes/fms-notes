@@ -1663,10 +1663,9 @@ button {
 /* ── Footer ───────────────────────────────────────────────── */
 .footer {
   border-top: 1px solid var(--border);
-  padding: var(--sp-5) var(--sp-4);
+  padding: var(--sp-5) var(--sp-4) var(--sp-4);
   text-align: center;
-  margin-top: auto;
-  background: var(--surface);
+  background: none;
 }
 
 .footer-inner {
@@ -1676,31 +1675,14 @@ button {
 
 .footer-brand {
   font-size: var(--fs-sm);
-  font-weight: 700;
-  color: var(--text);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  margin-bottom: 3px;
-}
-
-.footer-brand .logo-sm {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 18px;
-  height: 18px;
-  background: var(--brand-600);
-  border-radius: 5px;
-  font-size: 0.45rem;
-  font-weight: 900;
-  color: #fff;
+  font-weight: 500;
+  color: var(--text-secondary);
+  margin-bottom: 2px;
 }
 
 .footer-text {
   font-size: var(--fs-xs);
-  color: var(--text-secondary);
+  color: var(--text-tertiary);
 }
 
 /* ── Notice board ─────────────────────────────────────────── */

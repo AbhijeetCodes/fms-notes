@@ -105,15 +105,15 @@ function App() {
           </Routes>
         </main>
 
-        <footer className="footer">
-          <div className="footer-inner">
-            <div className="footer-brand">
-              <span className="logo-sm" aria-hidden="true">FMS</span>
-              An initiative by FMS students
+        {/* Sign-off belongs at the end of the library, not under every page */}
+        {location.pathname === '/' && (
+          <footer className="footer">
+            <div className="footer-inner">
+              <div className="footer-brand">An initiative by FMS students</div>
+              <div className="footer-text">{'Built by Abhijeet with coffee ☕ & tokens 🤖'}</div>
             </div>
-            <div className="footer-text">{'Built by Abhijeet with coffee ☕ & tokens 🪙'}</div>
-          </div>
-        </footer>
+          </footer>
+        )}
 
         {/* Thumb-reachable navigation on phones, where most of the traffic lands from WhatsApp */}
         <nav className="tabbar" aria-label="Main (mobile)">

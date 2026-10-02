@@ -1,7 +1,8 @@
 import { useState, useEffect, createContext, useContext } from 'react';
 import { Routes, Route, Link, NavLink, useLocation } from 'react-router-dom';
 import { supabase, signInWithGoogle, signOut, isModerator } from './lib/supabase';
-import { IconLibrary, IconCalendar, IconUpload, IconFiles, IconShield } from './components/Icons';
+import { IconLibrary, IconCalendar, IconUpload, IconFiles, IconShield, IconSun, IconMoon } from './components/Icons';
+import { useTheme } from './lib/theme';
 import Library from './pages/Library';
 import Calendar from './pages/Calendar';
 import CourseDetail from './pages/CourseDetail';
@@ -26,6 +27,7 @@ function App() {
   const [loading, setLoading] = useState(true);
   const [isMod, setIsMod] = useState(false);
   const location = useLocation();
+  const { theme, toggle: toggleTheme } = useTheme();
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -76,6 +78,15 @@ function App() {
                 {user && <Link to="/mine" className={isActive('/mine')}>My Uploads</Link>}
                 {isMod && <Link to="/admin" className={isActive('/admin')}>Admin</Link>}
               </span>
+
+              <button
+                className="theme-toggle"
+                onClick={toggleTheme}
+                aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+                title={theme === 'dark' ? 'Light mode' : 'Dark mode'}
+              >
+                {theme === 'dark' ? <IconSun /> : <IconMoon />}
+              </button>
 
               {user ? (
                 <span className="header-auth">

@@ -96,10 +96,10 @@
   --sp-5: 24px;
   --sp-6: 32px;
   --sp-7: 48px;
-  --r-sm: 8px;
-  --r-md: 12px;
-  --r-lg: 16px;
-  --r-xl: 22px;
+  --r-sm: 4px;
+  --r-md: 6px;
+  --r-lg: 8px;
+  --r-xl: 10px;
   --r-pill: 999px;
   --radius: var(--r-md);
   --container: 1080px;
@@ -113,47 +113,52 @@
   --tabbar-h: 62px;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --primary: var(--brand-400);
-    --primary-hover: var(--brand-300);
-    --primary-light: #2a1119;
-    --primary-ring: rgba(208, 92, 128, 0.25);
-    --accent: var(--brand-400);
+/* Dark theme. The resolved theme (saved choice, else the OS setting) is
+   written to <html data-theme> by the inline script in index.html. */
+:root {
+  color-scheme: light;
+}
 
-    --bg: #131110;
-    --surface: #1c1a18;
-    --surface-2: #232120;
-    --surface-sunken: #171514;
-    --border: #322e2c;
-    --border-strong: #423d3a;
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --primary: var(--brand-400);
+  --primary-hover: var(--brand-300);
+  --primary-light: #2a1119;
+  --primary-ring: rgba(208, 92, 128, 0.25);
+  --accent: var(--brand-400);
 
-    --text: #f3f0ed;
-    --text-primary: #f3f0ed;
-    --text-secondary: #a8a09a;
-    --text-tertiary: #918983;
+  --bg: #131110;
+  --surface: #1c1a18;
+  --surface-2: #232120;
+  --surface-sunken: #171514;
+  --border: #322e2c;
+  --border-strong: #423d3a;
 
-    --success: #3fbd8b;
-    --success-bg: #12291f;
-    --warning: #e0a44a;
-    --warning-bg: #2b2013;
-    --danger: #f08279;
-    --danger-bg: #2d1715;
-    --info: #7ea6ff;
-    --info-bg: #161d2e;
+  --text: #f3f0ed;
+  --text-primary: #f3f0ed;
+  --text-secondary: #a8a09a;
+  --text-tertiary: #918983;
 
-    --ev-assignment: #7ea6ff;
-    --ev-exam: #f08279;
-    --ev-quiz: #e0a44a;
-    --ev-submission: #b295f7;
-    --ev-presentation: #57c0d4;
-    --ev-class: #3fbd8b;
-    --ev-other: var(--text-secondary);
+  --success: #3fbd8b;
+  --success-bg: #12291f;
+  --warning: #e0a44a;
+  --warning-bg: #2b2013;
+  --danger: #f08279;
+  --danger-bg: #2d1715;
+  --info: #7ea6ff;
+  --info-bg: #161d2e;
 
-    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
-    --shadow: 0 2px 8px rgba(0, 0, 0, 0.45);
-    --shadow-lg: 0 14px 36px rgba(0, 0, 0, 0.55);
-  }
+  --ev-assignment: #7ea6ff;
+  --ev-exam: #f08279;
+  --ev-quiz: #e0a44a;
+  --ev-submission: #b295f7;
+  --ev-presentation: #57c0d4;
+  --ev-class: #3fbd8b;
+  --ev-other: var(--text-secondary);
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow: 0 2px 8px rgba(0, 0, 0, 0.45);
+  --shadow-lg: 0 14px 36px rgba(0, 0, 0, 0.55);
 }
 
 /* ── Base ─────────────────────────────────────────────────── */
@@ -349,6 +354,21 @@ button {
 
 .header-nav :focus-visible {
   outline-color: #fff;
+}
+
+.header-nav .theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  flex-shrink: 0;
+}
+
+.theme-toggle svg {
+  width: 18px;
+  height: 18px;
 }
 
 .header-auth {

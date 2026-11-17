@@ -104,7 +104,7 @@ const TYPE_FILTERS = [
 
 export default function Library() {
   const { user } = useAuth();
-  const [semester, setSemester] = useState(1);
+  const [semester, setSemester] = useState(2);
   const [counts, setCounts] = useState({});
   const [search, setSearch] = useState('');
   const [searchResults, setSearchResults] = useState(null);
